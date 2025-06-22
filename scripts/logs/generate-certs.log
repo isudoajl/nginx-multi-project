@@ -64,3 +64,12 @@
 [2025-06-22 21:43:10]   - Import /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem into your browser's certificate store
 [2025-06-22 21:43:10]   - For development, you may need to add an exception in your browser
 [2025-06-22 21:43:10] Certificate generation process complete!
+[2025-06-22 23:44:21] Generating self-signed certificate for test-project.local (valid for 365 days)
+[2025-06-22 23:44:21] Self-signed certificate generated successfully:
+[2025-06-22 23:44:21]   - Private key: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/test-project/certs/cert-key.pem
+[2025-06-22 23:44:21]   - Certificate: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/test-project/certs/cert.pem
+[2025-06-22 23:44:21] Certificate details:
+[2025-06-22 23:44:21] To trust this certificate in your browser:
+[2025-06-22 23:44:21]   - Import /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/test-project/certs/cert.pem into your browser's certificate store
+[2025-06-22 23:44:21]   - For development, you may need to add an exception in your browser
+[2025-06-22 23:44:21] Certificate generation process complete!
