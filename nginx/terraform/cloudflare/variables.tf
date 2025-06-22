@@ -35,4 +35,16 @@ variable "zone_plan" {
 variable "account_id" {
   description = "Cloudflare account ID"
   type        = string
+}
+
+variable "enable_image_optimization" {
+  description = "Enable Cloudflare Image Optimization (Polish)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_argo_smart_routing" {
+  description = "Enable Cloudflare Argo Smart Routing (requires Argo subscription)"
+  type        = bool
+  default     = false
 } 
