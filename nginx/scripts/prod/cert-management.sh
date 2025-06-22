@@ -38,6 +38,7 @@ show_help() {
   echo -e "  --validate      Validate certificates"
   echo -e "  --status        Show certificate status"
   echo -e "  --setup-cron    Setup automatic renewal cron job"
+  echo -e "  --rotate [days] Check and rotate certificates expiring within [days] days (default: 30)"
   echo -e "  --help          Display this help message"
 }
 
@@ -228,14 +229,14 @@ setup_cron() {
 SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 CERT_SCRIPT="\${SCRIPT_DIR}/cert-management.sh"
 
-# Run certificate renewal
-\${CERT_SCRIPT} --renew
+# Run certificate rotation (which includes renewal)
+\${CERT_SCRIPT} --rotate 30
 
-# Reload Nginx if certificates were renewed
+# Reload Nginx if certificates were rotated
 if [ \$? -eq 0 ]; then
   # In a real environment, this would reload Nginx
   # systemctl reload nginx
-  echo "Certificates renewed successfully"
+  echo "Certificates rotated successfully"
 fi
 
 exit 0
@@ -272,6 +273,16 @@ case "$1" in
     ;;
   --setup-cron)
     setup_cron
+    ;;
+  --rotate)
+    # Call the certificate rotation script if it exists
+    if [ -f "${SCRIPT_DIR}/cert-rotation.sh" ]; then
+      threshold_days="${2:-30}"  # Use provided value or default to 30
+      "${SCRIPT_DIR}/cert-rotation.sh" --rotate "${threshold_days}"
+    else
+      echo -e "${RED}Error: Certificate rotation script not found${NC}"
+      exit 1
+    fi
     ;;
   --help)
     show_help
