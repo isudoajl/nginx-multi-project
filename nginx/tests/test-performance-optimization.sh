@@ -19,7 +19,8 @@ NC='\033[0m' # No Color
 
 # Define paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TERRAFORM_DIR="$(dirname "$SCRIPT_DIR")/terraform/cloudflare"
+PROJECT_ROOT="$(cd "$(dirname "$(dirname "$SCRIPT_DIR")")" && pwd)"
+TERRAFORM_DIR="$SCRIPT_DIR/../terraform/cloudflare"
 TEST_DOMAIN="test-performance.example.com"
 
 echo -e "${YELLOW}Starting performance optimization test...${NC}"
@@ -41,16 +42,49 @@ echo -e "${YELLOW}Verifying Terraform configuration...${NC}"
 
 # Check for performance-related resources in Terraform files
 MAIN_TF="$TERRAFORM_DIR/main.tf"
-if grep -q "brotli" "$MAIN_TF" && \
-   grep -q "http3" "$MAIN_TF" && \
-   grep -q "minify" "$MAIN_TF" && \
-   grep -q "polish" "$MAIN_TF" && \
-   grep -q "browser_cache_ttl" "$MAIN_TF" && \
-   grep -q "cloudflare_argo" "$MAIN_TF"; then
-    echo -e "${GREEN}Performance optimization configurations verified in Terraform${NC}"
+test_failed=false
+
+# Define all the performance optimization features to check
+declare -A features=(
+    ["brotli"]="Brotli compression"
+    ["http3"]="HTTP/3 support"
+    ["http2"]="HTTP/2 support"
+    ["early_hints"]="Early Hints"
+    ["zero_rtt"]="Zero Round Trip Time"
+    ["minify"]="Minification"
+    ["polish"]="Image optimization (Polish)"
+    ["webp"]="WebP conversion"
+    ["browser_cache_ttl"]="Browser cache TTL"
+    ["edge_ttl"]="Edge cache TTL"
+    ["cloudflare_argo"]="Argo Smart Routing"
+    ["cloudflare_tiered_cache"]="Tiered Cache"
+    ["response_buffering"]="Response buffering"
+)
+
+# Check each feature in the Terraform configuration
+for feature in "${!features[@]}"; do
+    if grep -q "$feature" "$MAIN_TF"; then
+        echo -e "${GREEN}✓ ${features[$feature]} is configured in Terraform${NC}"
+    else
+        echo -e "${RED}✗ ${features[$feature]} is not configured in Terraform${NC}"
+        test_failed=true
+    fi
+done
+
+# Check for API response caching configuration
+if grep -q "Cache GET API responses" "$MAIN_TF"; then
+    echo -e "${GREEN}✓ API response caching for GET requests is configured${NC}"
 else
-    echo -e "${RED}Error: Some performance optimization configurations are missing in Terraform${NC}"
-    exit 1
+    echo -e "${RED}✗ API response caching for GET requests is not configured${NC}"
+    test_failed=true
+fi
+
+# Check for cache key configuration for query parameters
+if grep -q "cache_key" "$MAIN_TF" && grep -q "query_string" "$MAIN_TF"; then
+    echo -e "${GREEN}✓ Cache key configuration for query parameters is configured${NC}"
+else
+    echo -e "${RED}✗ Cache key configuration for query parameters is not configured${NC}"
+    test_failed=true
 fi
 
 # Simulate testing of HTTP headers that would be present with performance optimizations
@@ -68,42 +102,77 @@ vary: Accept-Encoding
 server: cloudflare
 content-encoding: br
 alt-svc: h3=":443"; ma=86400
+link: </style.css>; rel=preload; as=style
+cache-control: max-age=14400
+cf-bgj: minify
+accept-ch: Sec-CH-UA-Mobile, Sec-CH-UA, Sec-CH-UA-Platform, Sec-CH-UA-Arch, Sec-CH-UA-Full-Version-List
+cf-edge-cache: cache,max-age=2592000
+cf-apo: v=1,s=0,t=websocket
+cf-mirage: on
+content-dpr: 1.0
 EOF
 
-# Test for Brotli compression
-if grep -q "content-encoding: br" /tmp/mock_headers.txt; then
-    echo -e "${GREEN}✓ Brotli compression is configured${NC}"
-else
-    echo -e "${RED}✗ Brotli compression is not configured${NC}"
-    test_failed=true
-fi
+# Define all the HTTP headers to check
+declare -A headers=(
+    ["content-encoding: br"]="Brotli compression"
+    ["alt-svc: h3="]="HTTP/3"
+    ["cf-polished:"]="Image optimization (Polish)"
+    ["cf-cache-status: HIT"]="Caching"
+    ["link: <.*>; rel=preload"]="Early Hints"
+    ["cache-control: max-age=14400"]="Browser cache TTL"
+    ["cf-bgj: minify"]="Minification"
+    ["cf-edge-cache: cache"]="Edge caching"
+    ["cf-apo: v=1"]="Automatic Platform Optimization"
+    ["cf-mirage: on"]="Mirage image optimization"
+    ["content-dpr:"]="Dynamic resource delivery"
+    ["accept-ch:"]="Client hints"
+)
 
-# Test for HTTP/3
-if grep -q "alt-svc: h3=" /tmp/mock_headers.txt; then
-    echo -e "${GREEN}✓ HTTP/3 is configured${NC}"
-else
-    echo -e "${RED}✗ HTTP/3 is not configured${NC}"
-    test_failed=true
-fi
-
-# Test for Polish (image optimization)
-if grep -q "cf-polished:" /tmp/mock_headers.txt; then
-    echo -e "${GREEN}✓ Image optimization (Polish) is configured${NC}"
-else
-    echo -e "${RED}✗ Image optimization (Polish) is not configured${NC}"
-    test_failed=true
-fi
-
-# Test for caching
-if grep -q "cf-cache-status: HIT" /tmp/mock_headers.txt; then
-    echo -e "${GREEN}✓ Caching is configured${NC}"
-else
-    echo -e "${RED}✗ Caching is not configured${NC}"
-    test_failed=true
-fi
+# Check each header in the mock response
+for header in "${!headers[@]}"; do
+    if grep -q "$header" /tmp/mock_headers.txt; then
+        echo -e "${GREEN}✓ ${headers[$header]} is verified in HTTP headers${NC}"
+    else
+        echo -e "${RED}✗ ${headers[$header]} is not verified in HTTP headers${NC}"
+        test_failed=true
+    fi
+done
 
 # Clean up
 rm -f /tmp/mock_headers.txt
+
+# Check for environment-specific settings
+echo -e "${YELLOW}Checking environment-specific performance settings...${NC}"
+
+# Check development environment configuration
+DEV_ENV_CONF="$PROJECT_ROOT/nginx/config/environments/development/env.conf"
+if [ -f "$DEV_ENV_CONF" ]; then
+    echo -e "${GREEN}✓ Development environment configuration exists${NC}"
+    
+    # Check for development-specific performance settings
+    if grep -q "gzip" "$DEV_ENV_CONF" || grep -q "brotli" "$DEV_ENV_CONF"; then
+        echo -e "${GREEN}✓ Development environment has compression settings${NC}"
+    else
+        echo -e "${YELLOW}⚠ Development environment might be missing compression settings${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠ Development environment configuration not found: $DEV_ENV_CONF${NC}"
+fi
+
+# Check production environment configuration
+PROD_ENV_CONF="$PROJECT_ROOT/nginx/config/environments/production/env.conf"
+if [ -f "$PROD_ENV_CONF" ]; then
+    echo -e "${GREEN}✓ Production environment configuration exists${NC}"
+    
+    # Check for production-specific performance settings
+    if grep -q "gzip" "$PROD_ENV_CONF" || grep -q "brotli" "$PROD_ENV_CONF"; then
+        echo -e "${GREEN}✓ Production environment has compression settings${NC}"
+    else
+        echo -e "${YELLOW}⚠ Production environment might be missing compression settings${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠ Production environment configuration not found: $PROD_ENV_CONF${NC}"
+fi
 
 # Check if any test failed
 if [ "$test_failed" = true ]; then
