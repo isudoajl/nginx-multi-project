@@ -47,4 +47,28 @@ variable "enable_argo_smart_routing" {
   description = "Enable Cloudflare Argo Smart Routing (requires Argo subscription)"
   type        = bool
   default     = false
+}
+
+variable "enable_mobile_optimization" {
+  description = "Enable Cloudflare Mobile Optimization"
+  type        = bool
+  default     = true
+}
+
+variable "enable_mobile_redirect" {
+  description = "Enable Cloudflare Mobile Redirect to mobile subdomain"
+  type        = bool
+  default     = false
+}
+
+variable "mobile_subdomain" {
+  description = "Subdomain for mobile-specific site version (e.g., 'm' for m.example.com)"
+  type        = string
+  default     = "m"
+}
+
+variable "enable_rocket_loader" {
+  description = "Enable Cloudflare Rocket Loader for faster JavaScript loading"
+  type        = bool
+  default     = true
 } 

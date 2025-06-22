@@ -101,6 +101,13 @@ This configuration includes several performance optimization features:
 - WebP conversion for supported browsers
 - Response buffering for smoother content delivery
 
+### Mobile Optimization
+- Mobile subdomain support for dedicated mobile experiences
+- Mobile redirect for automatic device detection and redirection
+- Rocket Loader for faster JavaScript loading on mobile devices
+- Mobile-specific cache rules for optimized mobile performance
+- Device-type detection and optimization
+
 ### Routing Optimization
 - Argo Smart Routing for optimized network paths (optional)
 - Tiered caching for improved cache hit rates
