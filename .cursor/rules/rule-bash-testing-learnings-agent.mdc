@@ -1,0 +1,75 @@
+---
+description: This rule governs best practices for testing Bash scripts based on real-world learnings. It should be applied when: (1) Writing test frameworks for Bash scripts, (2) Implementing mocks for external services, (3) Setting up test environments for shell scripts, or (4) Creating validation tests for notification systems. The rule ensures reliable testing through proper mocking, test isolation, and exit code handling. This is particularly important for maintaining robust test suites that validate script behavior without triggering actual external services or notifications.
+globs:
+alwaysApply: false
+---
+# Bash Script Testing Best Practices
+
+## Critical Rules
+
+- Mock external services (email, Slack, Teams) in test environments to prevent actual notifications
+- Create dedicated test output directories to isolate test artifacts from production
+- Use simple, self-contained mock scripts rather than complex sed replacements for better reliability
+- Test each notification type separately with specific assertions for content validation
+- Validate script structure and function definitions before testing functionality
+- Implement proper error handling that preserves exit codes from subprocesses
+- Use wrapper scripts for testing error conditions to ensure exit codes propagate correctly
+- Maintain test isolation by cleaning up test artifacts between test runs
+- For complex Bash scripts, test in a Nix environment to ensure consistent dependencies
+- Prefer simple string pattern matching over complex regex for test assertions
+
+## Examples
+
+<example>
+# Testing a notification script with mocks
+
+# Create a mock script that simulates the notification script
+cat > "$TEST_OUTPUT_DIR/mock_notify_test.sh" << 'EOF'
+#!/bin/bash
+# Mock notification script for testing
+
+# Create output files directory
+mkdir -p "$(dirname "$0")/outputs"
+
+# Record the command that was run
+echo "$@" > "$(dirname "$0")/outputs/last_command.txt"
+
+# Simulate different notification types
+case "$1" in
+    pre-migration)
+        echo "MOCK: Would send pre-migration notification" > "$(dirname "$0")/outputs/email_output.txt"
+        echo "Migration Details: Test migration" >> "$(dirname "$0")/outputs/email_output.txt"
+        ;;
+    # Additional cases for other notification types
+esac
+
+echo "Mock notification sent successfully"
+exit 0
+EOF
+
+chmod +x "$TEST_OUTPUT_DIR/mock_notify_test.sh"
+
+# Test with the mock script
+run_test "Pre-migration notification" "\"$TEST_OUTPUT_DIR/mock_notify_test.sh\" pre-migration"
+run_test "Pre-migration content validation" "grep -q \"Migration Details\" \"$TEST_OUTPUT_DIR/outputs/email_output.txt\""
+</example>
+
+<example type="invalid">
+# Bad approach to testing notification script
+
+# Directly modify the original script with sed
+sed -i 's/sendmail -f/echo "Would send email" #/g' notify-team.sh
+
+# Run the modified script
+./notify-team.sh pre-migration
+
+# Check if it worked
+if [ $? -eq 0 ]; then
+  echo "Test passed"
+else
+  echo "Test failed"
+fi
+
+# Restore the original script
+git checkout -- notify-team.sh
+</example>

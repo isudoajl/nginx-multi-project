@@ -1,0 +1,35 @@
+---
+description: This rule governs the usage of Nix development environments across the project. It should be applied when: (1) Running any development commands or tasks, (2) Setting up new development environments, (3) Building or testing containers, (4) Modifying environment configurations, or (5) Onboarding new developers. The rule ensures consistent development environments, reproducible builds, and prevents "works on my machine" issues by enforcing the use of Nix shells for all development activities. This is particularly crucial for maintaining identical environments across all developers and CI/CD pipelines.
+globs:
+alwaysApply: true
+---
+# Nix Environment Rule
+
+## Critical Rules
+
+- Always work inside the Nix development environment for all development tasks
+- Before running any commands or tests, ensure you are in the Nix shell using `nix develop`
+- Verify Nix environment is active by checking for environment variables like `IN_NIX_SHELL=1`
+- All tools required for development (nginx, podman, etc.) should be accessed through the Nix environment
+- Never attempt to install system packages or use system-installed versions of tools
+- If not in a Nix environment, first enter it with `nix develop` before proceeding with any other commands
+- Remind the user to enter Nix environment if they attempt to run commands outside of it
+
+## Examples
+
+<example>
+# Check if in Nix environment
+if [ -z "$IN_NIX_SHELL" ]; then
+  echo "Please enter Nix environment with 'nix develop' first"
+  exit 1
+fi
+
+# Then proceed with development tasks
+nginx-test
+</example>
+
+<example type="invalid">
+# Running commands directly without checking Nix environment
+nginx -t
+podman build -t my-image .
+</example>

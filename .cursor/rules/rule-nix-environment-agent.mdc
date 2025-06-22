@@ -1,0 +1,105 @@
+---
+description: This rule governs Nix development environment practices and script execution. It should be applied when: (1) Writing scripts that need to run in a Nix environment, (2) Setting up new project development environments with flake.nix, (3) Creating container builds using Nix, or (4) Implementing environment validation checks. The rule ensures consistent environment handling, proper dependency management, and reproducible development setups. This is particularly important for maintaining development environment parity and ensuring all developers work with the same tooling versions.
+globs:
+alwaysApply: false
+---
+# Nix Environment Best Practices
+
+## Critical Rules
+
+- Always check for Nix environment with `if [ -z "$IN_NIX_SHELL" ]` at the start of scripts
+- Provide auto-execution in Nix environment with `exec nix --extra-experimental-features nix-command --extra-experimental-features flakes develop -c "$0" "$@"`
+- Define all development tools in `devShells` in flake.nix rather than installing globally
+- Use `mkShell` with explicit `buildInputs` to ensure all dependencies are declared
+- Create custom development commands with `writeShellScriptBin` for common operations
+- Include helpful `shellHook` messages to guide developers on available commands
+- For container builds, use `dockerTools.buildImage` with explicit dependencies
+- Ensure hermetic builds by avoiding references to external resources
+- Document Nix environment setup in README.md with quick start commands
+- Create test scripts to validate Nix environment configuration
+
+## Examples
+
+<example>
+# Proper Nix environment handling in scripts
+
+#!/bin/bash
+# Ensure we're running in a Nix environment
+if [ -z "$IN_NIX_SHELL" ]; then
+    echo -e "\033[0;33mNot in Nix environment, attempting to run through nix develop...\033[0m"
+    if command -v nix &> /dev/null; then
+        exec nix --extra-experimental-features nix-command --extra-experimental-features flakes develop -c "$0" "$@"
+    else
+        echo -e "\033[0;31mERROR: Nix not available. Please install Nix and run in Nix environment.\033[0m"
+        exit 1
+    fi
+fi
+
+# Now we're guaranteed to be in a Nix environment
+echo "Running in Nix environment with proper dependencies"
+# ... rest of script ...
+
+# Example flake.nix with development environment
+cat > flake.nix << 'EOF'
+{
+  description = "Project with Nix";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          name = "project-dev-env";
+          
+          buildInputs = with pkgs; [
+            # Core tools
+            bash curl jq git
+            
+            # Custom commands
+            (writeShellScriptBin "project-setup" ''
+              echo "Setting up project environment..."
+              # setup commands
+            '')
+          ];
+          
+          shellHook = ''
+            echo "🚀 Development Environment Ready!"
+            echo "Available commands: project-setup"
+          '';
+        };
+      });
+}
+EOF
+</example>
+
+<example type="invalid">
+# Poor Nix environment handling
+
+#!/bin/bash
+# Script assumes global tools are available
+nginx -t
+podman build -t my-image .
+
+# No environment check or fallback
+if ! command -v nix &> /dev/null; then
+  echo "Please install nix"
+  exit 1
+fi
+
+# Hardcoded paths that may differ between environments
+source /etc/profile
+export PATH=$PATH:/usr/local/bin
+
+# Manual installation of dependencies
+apt-get install -y curl jq git
+
+# No documentation of required environment
+echo "Running in unknown environment state"
+</example>
