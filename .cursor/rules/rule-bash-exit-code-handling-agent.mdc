@@ -1,0 +1,77 @@
+---
+description: This rule governs proper exit code handling in Bash scripts and test frameworks. It should be applied when: (1) Writing or reviewing Bash scripts, (2) Creating test frameworks that validate command behavior, (3) Implementing error handling in shell scripts, or (4) Working with subprocess execution and pipeline commands. The rule ensures robust error detection, proper test validation, and maintainable script behavior by enforcing consistent exit code handling practices. This is particularly important for automation scripts, CI/CD pipelines, and test frameworks where accurate error detection and reporting is critical.
+globs:
+alwaysApply: false
+---
+# Bash Exit Code Handling Best Practices
+
+## Critical Rules
+
+- Always use `set -e` (or `set -o errexit`) to make scripts exit on errors unless explicitly handled
+- Use `set -o pipefail` to ensure pipeline failures are properly detected
+- When testing for errors, capture exit codes immediately: `command; exit_code=$?`
+- Avoid using `|| true` when you need to preserve the actual exit code
+- Use wrapper functions/scripts to properly propagate exit codes from subprocesses
+- In test frameworks, use explicit exit code assertions rather than relying on implicit behavior
+- When using subshells `$(command)`, capture and check exit codes separately
+- Document expected exit codes for commands that intentionally return non-zero
+- Use trap handlers to ensure cleanup happens even when scripts exit unexpectedly
+- When using `bash -c` for complex commands, ensure inner exit codes are properly propagated
+
+## Examples
+
+<example>
+# Proper exit code handling in test framework
+
+# Create a wrapper script to ensure exit codes are preserved
+cat > error_test_wrapper.sh << 'EOF'
+#!/bin/bash
+# Wrapper script for testing error conditions
+TARGET_SCRIPT="$1"
+shift
+"$TARGET_SCRIPT" "$@"
+exit $?
+EOF
+chmod +x error_test_wrapper.sh
+
+# Use the wrapper in tests to properly capture exit codes
+run_test "Invalid argument handling" "bash -c \"./error_test_wrapper.sh ./target_script.sh invalid-arg; exit \\\$?\"" 1
+
+# Alternative approach using a function and immediate exit code capture
+test_exit_code() {
+  "$@"
+  local code=$?
+  echo "Command exited with code: $code"
+  return $code
+}
+
+# Use the function in tests
+if ! test_exit_code ./target_script.sh invalid-arg; then
+  echo "Test passed - command failed as expected"
+else
+  echo "Test failed - command succeeded unexpectedly"
+  exit 1
+fi
+</example>
+
+<example type="invalid">
+# Poor exit code handling
+
+# Using || true masks the actual error
+./error_prone_script.sh || true
+echo "Script completed successfully"
+
+# Command substitution loses exit code information
+result=$(./error_prone_script.sh)
+echo "Got result: $result"
+
+# Complex pipeline masks errors without pipefail
+grep "error" log.txt | sort | uniq > errors.txt
+
+# Using if without capturing the specific exit code
+if ./error_prone_script.sh; then
+  echo "Success"
+else
+  echo "Failed" # But we don't know why or with what code
+fi
+</example>

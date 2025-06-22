@@ -1,0 +1,48 @@
+---
+description: This rule governs the usage of Nix commands in the development environment. It should be applied whenever: (1) Running commands in the Nix environment, (2) Executing scripts or tools within the Nix shell, (3) Testing Nix-built applications, or (4) Building container images with Nix. The rule ensures consistent command execution, proper environment isolation, and reproducible development workflows.
+globs: 
+alwaysApply: false
+---
+
+# Nix Command Usage Rule
+
+## Critical Rules
+
+- Always use the `--command` flag when executing commands in the Nix environment
+- Never run Nix commands without specifying the execution context
+- Use `nix develop --command <command>` for single commands in the development shell
+- For multiple commands, enter the shell with `nix develop` first, then run commands
+- When building containers, use `nix build .#<container-name>` syntax
+- Always verify Nix environment is active before running project-specific commands
+- For CI/CD pipelines, always use `--command` to ensure reproducible execution
+- Prefer explicit command execution over interactive shell usage for automation
+
+## Examples
+
+<example>
+# Correct: Running a command in the Nix environment
+nix develop --command nginx-test
+
+# Correct: Building a container
+nix build .#nginx-proxy
+
+# Correct: Multiple commands in sequence
+nix develop --command bash -c "nginx-dev && nginx-test"
+
+# Correct: Entering the shell for interactive work
+nix develop
+# Then run commands directly
+</example>
+
+<example type="invalid">
+# Incorrect: Running command without --command flag
+nix develop nginx-test
+
+# Incorrect: Assuming commands are available outside Nix shell
+nginx-test
+
+# Incorrect: Mixing environments
+nix develop
+exit
+nginx-test  # Command not available outside the shell
+</example>

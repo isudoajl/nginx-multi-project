@@ -1,0 +1,64 @@
+---
+description: This rule governs the implementation workflow process for feature development. It should be applied when: (1) Implementing new features, (2) Fixing bugs, (3) Refactoring existing code, or (4) Making any changes that require testing and documentation updates. The rule ensures proper test-driven development, validation before status updates, and maintainable implementation tracking. This workflow is critical for maintaining code quality, preventing regressions, and keeping project documentation accurate and up-to-date.
+globs:
+alwaysApply: false
+---
+
+
+# Implementation Workflow Rule
+
+## Critical Rules
+
+- Always follow this ordered workflow for feature implementation: (1) Code → (2) Test → (3) Validate → (4) Document → (5) Commit
+- Write comprehensive tests for ALL new implementations before marking features as complete
+- Tests MUST pass successfully before updating any implementation status documents
+- Only update implementation status files AFTER verifying tests pass
+- Include test coverage details when updating implementation status
+- Structure commits to include implementation, tests, and status updates together
+- Always execute tests in the appropriate environment (e.g., Nix shell) before considering implementation complete
+- Document any test failures or edge cases discovered during testing
+- Add both positive tests (expected behavior) and negative tests (error handling)
+- Verify idempotence for operations that should be repeatable
+- Include cleanup procedures in test scripts to restore system to original state
+- When updating implementation status, include: completion date, test status, and feature highlights
+
+## Examples
+
+<example>
+# Good implementation workflow
+
+# 1. First implement the feature
+$ vim src/feature.js
+
+# 2. Create tests for the feature
+$ vim tests/feature.test.js
+
+# 3. Run tests to validate implementation
+$ npm test
+
+# 4. Only after tests pass, update implementation status
+$ vim IMPLEMENTATION_STATUS.md
+# Update to mark feature as complete with test status
+
+# 5. Commit all changes together
+$ git add src/feature.js tests/feature.test.js IMPLEMENTATION_STATUS.md
+$ git commit -m "Implement feature with tests, all tests passing"
+</example>
+
+<example type="invalid">
+# Bad implementation workflow
+
+# 1. Implement the feature
+$ vim src/feature.js
+
+# 2. Update implementation status immediately
+$ vim IMPLEMENTATION_STATUS.md
+# Mark feature as complete without testing
+
+# 3. Commit without tests
+$ git add src/feature.js IMPLEMENTATION_STATUS.md
+$ git commit -m "Implement feature"
+
+# 4. Create tests later (or never)
+$ vim tests/feature.test.js
+</example>

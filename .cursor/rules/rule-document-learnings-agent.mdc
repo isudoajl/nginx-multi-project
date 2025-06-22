@@ -1,0 +1,62 @@
+---
+description: This rule governs the documentation of technical learnings and problem resolutions. It should be applied when: (1) Encountering persistent technical challenges, (2) Resolving complex issues that required significant investigation, (3) Discovering non-obvious solutions to common problems, or (4) Learning important technical details about tools, systems, or codebases. The rule ensures systematic capture of technical knowledge, promotes knowledge sharing, and prevents repeated struggles with similar issues by maintaining a searchable learning repository.
+globs:
+alwaysApply: false
+---
+# Document Learnings When Struggling
+
+## Critical Rules
+
+- When facing a persistent challenge, immediately create a `.md` file in the `.learnings/` directory (create if non-existent)
+- Structure learning documents with clear sections: Problem Statement, Attempted Solutions, Root Cause, and Resolution
+- Include error messages, commands, and code snippets with proper formatting
+- Document both successful and unsuccessful approaches to provide complete context
+- Add tags/categories to make learnings searchable and discoverable
+- Update existing learning documents when encountering similar issues with new insights
+- Reference related documentation, issues, or discussions that helped resolve the problem
+- Keep language clear, concise, and focused on technical details rather than narrative
+- Use a consistent naming convention: `YYYY-MM-DD-brief-description-of-issue.md`
+- When resolving issues in shared codebases, share learnings with the team through appropriate channels
+
+## Examples
+
+<example>
+# 2025-06-21 Bash Script Exit Code Handling in Test Framework
+
+## Problem Statement
+When testing error conditions in Bash scripts, the test framework was unable to properly capture non-zero exit codes from subprocesses, causing test failures.
+
+## Attempted Solutions
+1. Used `|| true` to prevent pipeline failure but this masked the actual exit code
+2. Tried using subshells with `$(command)` but exit codes were not preserved
+3. Attempted to use `set +e` locally but this affected other test behaviors
+
+## Root Cause
+When using `bash -c` with complex commands, exit codes from inner commands weren't being properly propagated to the outer shell due to how command substitution works in Bash.
+
+## Resolution
+Created a wrapper script that directly executes the target script with arguments and explicitly returns the exit code:
+
+```bash
+#!/bin/bash
+# error_test_wrapper.sh
+TARGET_SCRIPT="$1"
+shift
+"$TARGET_SCRIPT" "$@"
+exit $?
+```
+
+Then called this wrapper in tests:
+```bash
+run_test "Error handling test" "bash -c \"./error_test_wrapper.sh ./target_script.sh invalid-arg; exit \\\$?\"" 1
+```
+
+## Tags
+#bash #testing #exit-codes #subprocess #error-handling
+</example>
+
+<example type="invalid">
+Today I spent 3 hours trying to fix the build. It was really frustrating because nothing seemed to work. I tried a bunch of different things and eventually it started working, but I'm not sure why. Maybe it was just a temporary issue with the server.
+
+#fixed #build #finally
+</example>
