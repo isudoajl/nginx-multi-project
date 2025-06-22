@@ -67,7 +67,7 @@ This document outlines the implementation plan for the second parallel developme
 
 2. **Implement Support Scripts** ⚠️ (Partially implemented)
    - Create update-proxy.sh script (stub for later integration) ✅
-   - Create generate-certs.sh script ❌
+   - Create generate-certs.sh script ✅ (Implemented on 2025-06-22)
    - Create utility functions ❌
 
 3. **Implement Error Handling and Logging** ✅ (Implemented on 2025-06-22)
@@ -95,7 +95,13 @@ This document outlines the implementation plan for the second parallel developme
    ./tests/test-error-handling.sh
    ```
 
-4. **End-to-End Test** ❌ (Not implemented yet)
+4. **Certificate Generation Test** ✅ (Passed on 2025-06-22)
+   ```bash
+   # Test script to verify certificate generation
+   ./tests/test-cert-generation.sh
+   ```
+
+5. **End-to-End Test** ❌ (Not implemented yet)
    ```bash
    # Test script to verify complete workflow
    ./tests/test-e2e-workflow.sh
@@ -105,6 +111,7 @@ This document outlines the implementation plan for the second parallel developme
 - Scripts execute without errors ✅
 - Input validation catches all invalid inputs ✅
 - Error handling properly manages failure scenarios ✅
+- Certificate generation works for both DEV and PRO environments ✅
 - End-to-end workflow successfully creates a project container ⚠️ (Partially implemented - container creation works but deployment is skipped in tests)
 
 **Estimated Time:** 3 weeks  
@@ -118,9 +125,9 @@ This document outlines the implementation plan for the second parallel developme
 
 ### Tasks
 
-1. **Implement Self-Signed Certificate Generation**
-   - Create script to generate self-signed certificates
-   - Implement certificate installation
+1. **Implement Self-Signed Certificate Generation** ✅ (Implemented on 2025-06-22)
+   - Create script to generate self-signed certificates ✅
+   - Implement certificate installation ✅
 
 2. **Implement Local Host Configuration**
    - Create script to update local hosts file
@@ -132,7 +139,7 @@ This document outlines the implementation plan for the second parallel developme
 
 ### Tests
 
-1. **Certificate Generation Test**
+1. **Certificate Generation Test** ✅ (Passed on 2025-06-22)
    ```bash
    # Test script to verify certificate generation
    ./tests/test-cert-generation.sh
@@ -151,7 +158,7 @@ This document outlines the implementation plan for the second parallel developme
    ```
 
 ### Success Criteria
-- Self-signed certificates generated and installed correctly
+- Self-signed certificates generated and installed correctly ✅
 - Local host configuration properly resolves domains
 - Development workflow allows for efficient local testing
 
