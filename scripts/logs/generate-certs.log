@@ -1,0 +1,66 @@
+[2025-06-22 21:41:32] ERROR: Domain name is required. Use --domain or -d to specify.
+[2025-06-22 21:41:32] ERROR: Output directory is required. Use --output or -o to specify.
+[2025-06-22 21:41:32] ERROR: Invalid domain format: invalid-domain
+[2025-06-22 21:41:32] ERROR: Environment type must be either DEV or PRO.
+[2025-06-22 21:41:32] Generating self-signed certificate for test-domain.local (valid for 365 days)
+[2025-06-22 21:41:33] Self-signed certificate generated successfully:
+[2025-06-22 21:41:33]   - Private key: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem
+[2025-06-22 21:41:33]   - Certificate: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem
+[2025-06-22 21:41:33] Certificate details:
+[2025-06-22 21:41:33] To trust this certificate in your browser:
+[2025-06-22 21:41:33]   - Import /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem into your browser's certificate store
+[2025-06-22 21:41:33]   - For development, you may need to add an exception in your browser
+[2025-06-22 21:41:33] Certificate generation process complete!
+[2025-06-22 21:41:33] Preparing for production certificate for test-domain.local
+[2025-06-22 21:41:33] Certificate Signing Request (CSR) generated successfully:
+[2025-06-22 21:41:33]   - Private key: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem
+[2025-06-22 21:41:33]   - CSR file: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.csr
+[2025-06-22 21:41:33] CSR details:
+[2025-06-22 21:41:33] To obtain a production certificate:
+[2025-06-22 21:41:33]   1. Submit the CSR (/home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.csr) to your certificate authority
+[2025-06-22 21:41:33]   2. Once you receive the certificate, save it as /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem
+[2025-06-22 21:41:33]   3. Keep the private key (/home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem) secure
+[2025-06-22 21:41:33]   4. Configure your web server to use both files
+[2025-06-22 21:41:33] Certificate generation process complete!
+[2025-06-22 21:41:33] Generating self-signed certificate for test-domain.local (valid for 30 days)
+[2025-06-22 21:41:33] Self-signed certificate generated successfully:
+[2025-06-22 21:41:33]   - Private key: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem
+[2025-06-22 21:41:33]   - Certificate: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem
+[2025-06-22 21:41:33] Certificate details:
+[2025-06-22 21:41:33] To trust this certificate in your browser:
+[2025-06-22 21:41:33]   - Import /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem into your browser's certificate store
+[2025-06-22 21:41:33]   - For development, you may need to add an exception in your browser
+[2025-06-22 21:41:33] Certificate generation process complete!
+[2025-06-22 21:43:06] ERROR: Domain name is required. Use --domain or -d to specify.
+[2025-06-22 21:43:06] ERROR: Output directory is required. Use --output or -o to specify.
+[2025-06-22 21:43:06] ERROR: Invalid domain format: invalid-domain
+[2025-06-22 21:43:06] ERROR: Environment type must be either DEV or PRO.
+[2025-06-22 21:43:07] Generating self-signed certificate for test-domain.local (valid for 365 days)
+[2025-06-22 21:43:08] Self-signed certificate generated successfully:
+[2025-06-22 21:43:08]   - Private key: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem
+[2025-06-22 21:43:08]   - Certificate: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem
+[2025-06-22 21:43:08] Certificate details:
+[2025-06-22 21:43:08] To trust this certificate in your browser:
+[2025-06-22 21:43:08]   - Import /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem into your browser's certificate store
+[2025-06-22 21:43:08]   - For development, you may need to add an exception in your browser
+[2025-06-22 21:43:08] Certificate generation process complete!
+[2025-06-22 21:43:08] Preparing for production certificate for test-domain.local
+[2025-06-22 21:43:08] Certificate Signing Request (CSR) generated successfully:
+[2025-06-22 21:43:08]   - Private key: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem
+[2025-06-22 21:43:08]   - CSR file: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.csr
+[2025-06-22 21:43:08] CSR details:
+[2025-06-22 21:43:08] To obtain a production certificate:
+[2025-06-22 21:43:08]   1. Submit the CSR (/home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.csr) to your certificate authority
+[2025-06-22 21:43:08]   2. Once you receive the certificate, save it as /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem
+[2025-06-22 21:43:08]   3. Keep the private key (/home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem) secure
+[2025-06-22 21:43:08]   4. Configure your web server to use both files
+[2025-06-22 21:43:08] Certificate generation process complete!
+[2025-06-22 21:43:08] Generating self-signed certificate for test-domain.local (valid for 30 days)
+[2025-06-22 21:43:09] Self-signed certificate generated successfully:
+[2025-06-22 21:43:09]   - Private key: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert-key.pem
+[2025-06-22 21:43:09]   - Certificate: /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem
+[2025-06-22 21:43:09] Certificate details:
+[2025-06-22 21:43:10] To trust this certificate in your browser:
+[2025-06-22 21:43:10]   - Import /home/isudoajl/projects/nginx-multi-project-IMPL_STAT_2/tests/temp/certs/cert.pem into your browser's certificate store
+[2025-06-22 21:43:10]   - For development, you may need to add an exception in your browser
+[2025-06-22 21:43:10] Certificate generation process complete!
