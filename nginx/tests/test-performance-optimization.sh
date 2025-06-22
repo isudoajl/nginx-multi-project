@@ -59,6 +59,9 @@ declare -A features=(
     ["cloudflare_argo"]="Argo Smart Routing"
     ["cloudflare_tiered_cache"]="Tiered Cache"
     ["response_buffering"]="Response buffering"
+    ["mobile_redirect"]="Mobile Redirect"
+    ["mobile_optimization"]="Mobile Optimization"
+    ["rocket_loader"]="Rocket Loader"
 )
 
 # Check each feature in the Terraform configuration
@@ -87,6 +90,21 @@ else
     test_failed=true
 fi
 
+# Check for mobile-specific configurations
+if grep -q "Mobile-specific page rule" "$MAIN_TF"; then
+    echo -e "${GREEN}✓ Mobile-specific page rule is configured${NC}"
+else
+    echo -e "${RED}✗ Mobile-specific page rule is not configured${NC}"
+    test_failed=true
+fi
+
+if grep -q "Mobile-specific cache rule" "$MAIN_TF"; then
+    echo -e "${GREEN}✓ Mobile-specific cache rule is configured${NC}"
+else
+    echo -e "${RED}✗ Mobile-specific cache rule is not configured${NC}"
+    test_failed=true
+fi
+
 # Simulate testing of HTTP headers that would be present with performance optimizations
 echo -e "${YELLOW}Simulating HTTP header tests...${NC}"
 
@@ -110,6 +128,9 @@ cf-edge-cache: cache,max-age=2592000
 cf-apo: v=1,s=0,t=websocket
 cf-mirage: on
 content-dpr: 1.0
+cf-rocket-loader: on
+vary: User-Agent
+cf-device-type: mobile
 EOF
 
 # Define all the HTTP headers to check
@@ -126,6 +147,9 @@ declare -A headers=(
     ["cf-mirage: on"]="Mirage image optimization"
     ["content-dpr:"]="Dynamic resource delivery"
     ["accept-ch:"]="Client hints"
+    ["cf-rocket-loader: on"]="Rocket Loader"
+    ["vary: User-Agent"]="Mobile detection"
+    ["cf-device-type: mobile"]="Device type detection"
 )
 
 # Check each header in the mock response
@@ -172,6 +196,27 @@ if [ -f "$PROD_ENV_CONF" ]; then
     fi
 else
     echo -e "${YELLOW}⚠ Production environment configuration not found: $PROD_ENV_CONF${NC}"
+fi
+
+# Test mobile optimization settings
+echo -e "${YELLOW}Testing mobile optimization settings...${NC}"
+
+# Check variables.tf for mobile optimization variables
+VARS_TF="$TERRAFORM_DIR/variables.tf"
+if grep -q "enable_mobile_optimization" "$VARS_TF" && grep -q "enable_mobile_redirect" "$VARS_TF" && grep -q "mobile_subdomain" "$VARS_TF"; then
+    echo -e "${GREEN}✓ Mobile optimization variables are defined${NC}"
+else
+    echo -e "${RED}✗ Mobile optimization variables are not defined${NC}"
+    test_failed=true
+fi
+
+# Check test.tfvars for mobile optimization values
+TEST_TFVARS="$TERRAFORM_DIR/test.tfvars"
+if grep -q "enable_mobile_optimization" "$TEST_TFVARS" && grep -q "enable_mobile_redirect" "$TEST_TFVARS" && grep -q "mobile_subdomain" "$TEST_TFVARS"; then
+    echo -e "${GREEN}✓ Mobile optimization values are set in test.tfvars${NC}"
+else
+    echo -e "${RED}✗ Mobile optimization values are not set in test.tfvars${NC}"
+    test_failed=true
 fi
 
 # Check if any test failed

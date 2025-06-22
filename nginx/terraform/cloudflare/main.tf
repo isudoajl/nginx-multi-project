@@ -72,6 +72,20 @@ resource "cloudflare_zone_settings_override" "ssl_settings" {
     # Image optimization
     polish = var.enable_image_optimization ? "lossless" : "off"
     webp = var.enable_image_optimization ? "on" : "off"
+    
+    # Mobile optimization settings
+    mobile_redirect {
+      status = var.enable_mobile_redirect ? "on" : "off"
+      subdomain = var.mobile_subdomain
+      strip_uri = false
+    }
+    
+    # Additional mobile optimizations
+    rocket_loader = var.enable_rocket_loader ? "on" : "off"
+    mobile_optimization {
+      mobile_subdomain = var.mobile_subdomain
+      status = var.enable_mobile_optimization ? "on" : "off"
+    }
   }
 }
 
@@ -139,6 +153,26 @@ resource "cloudflare_page_rule" "browser_cache" {
   }
 }
 
+# Mobile-specific page rule for optimized content
+resource "cloudflare_page_rule" "mobile_optimization" {
+  count   = var.enable_mobile_optimization ? 1 : 0
+  zone_id = var.create_zone ? cloudflare_zone.project_zone[0].id : var.zone_id
+  target  = "${var.mobile_subdomain}.${var.domain_name}/*"
+  priority = 3
+
+  actions {
+    cache_level = "cache_everything"
+    edge_cache_ttl = 86400 # 1 day
+    browser_cache_ttl = 14400 # 4 hours
+    rocket_loader = "on"
+    minify {
+      html = "on"
+      css = "on"
+      js = "on"
+    }
+  }
+}
+
 # Cache Configuration
 # Using cache rules via ruleset instead of deprecated cache_rules
 resource "cloudflare_ruleset" "cache_rules" {
@@ -191,6 +225,28 @@ resource "cloudflare_ruleset" "cache_rules" {
     expression  = "(http.request.uri.path matches \"^/api/.*\") and (http.request.method eq \"GET\")"
     description = "Cache GET API responses"
     enabled     = true
+  }
+  
+  # Mobile-specific cache rule
+  rules {
+    action = "set_cache_settings"
+    action_parameters {
+      edge_ttl {
+        mode    = "override_origin"
+        default = 86400 # 1 day
+        status_code_ttl {
+          status_code = 200
+          value       = 86400 # 1 day
+        }
+      }
+      cache = true
+      serve_stale {
+        disable_stale_while_updating = false
+      }
+    }
+    expression  = "(http.host contains \"${var.mobile_subdomain}\") and (http.request.method eq \"GET\")"
+    description = "Mobile-specific caching"
+    enabled     = var.enable_mobile_optimization
   }
 }
 
