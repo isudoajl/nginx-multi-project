@@ -19,7 +19,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Define paths
-TERRAFORM_DIR="$(dirname "$(dirname "$0")")/terraform/cloudflare"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TERRAFORM_DIR="$(dirname "$SCRIPT_DIR")/terraform/cloudflare"
 TEST_TF_VARS="$TERRAFORM_DIR/test.tfvars"
 
 echo -e "${YELLOW}Starting Terraform configuration test...${NC}"
@@ -38,6 +39,9 @@ origin_ip = "192.0.2.1"
 create_zone = false
 zone_id = "test-zone-id"
 zone_plan = "free"
+account_id = "test-account-id"
+enable_image_optimization = true
+enable_argo_smart_routing = false
 EOF
 
 # Navigate to Terraform directory
@@ -66,6 +70,23 @@ if ! terraform plan -var-file="$TEST_TF_VARS" -out=tfplan.out > /dev/null 2>&1; 
     # This is expected to fail without real credentials, but we're just testing syntax
 else
     echo -e "${GREEN}Terraform plan completed successfully${NC}"
+fi
+
+# Verify performance optimization configurations
+echo -e "${YELLOW}Verifying performance optimization configurations...${NC}"
+
+# Check for performance-related resources in Terraform files
+MAIN_TF="$TERRAFORM_DIR/main.tf"
+if grep -q "brotli" "$MAIN_TF" && \
+   grep -q "http3" "$MAIN_TF" && \
+   grep -q "minify" "$MAIN_TF" && \
+   grep -q "polish" "$MAIN_TF" && \
+   grep -q "browser_cache_ttl" "$MAIN_TF" && \
+   grep -q "cloudflare_argo" "$MAIN_TF"; then
+    echo -e "${GREEN}Performance optimization configurations verified successfully${NC}"
+else
+    echo -e "${RED}Error: Some performance optimization configurations are missing${NC}"
+    exit 1
 fi
 
 # Clean up

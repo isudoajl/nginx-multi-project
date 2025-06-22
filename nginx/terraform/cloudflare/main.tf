@@ -48,6 +48,30 @@ resource "cloudflare_zone_settings_override" "ssl_settings" {
     tls_1_3 = "on"
     automatic_https_rewrites = "on"
     universal_ssl = "on"
+    
+    # Performance optimization settings
+    brotli = "on"
+    early_hints = "on"
+    http2 = "on"
+    http3 = "on"
+    zero_rtt = "on"
+    
+    # Minification settings
+    minify {
+      css = "on"
+      html = "on"
+      js = "on"
+    }
+    
+    # Browser cache TTL
+    browser_cache_ttl = 14400 # 4 hours
+    
+    # Response buffering
+    response_buffering = "on"
+    
+    # Image optimization
+    polish = var.enable_image_optimization ? "lossless" : "off"
+    webp = var.enable_image_optimization ? "on" : "off"
   }
 }
 
@@ -102,6 +126,19 @@ resource "cloudflare_page_rule" "cache_everything" {
   }
 }
 
+# Additional page rule for browser caching
+resource "cloudflare_page_rule" "browser_cache" {
+  zone_id = var.create_zone ? cloudflare_zone.project_zone[0].id : var.zone_id
+  target = "*.${var.domain_name}/static/*"
+  priority = 2
+
+  actions {
+    browser_cache_ttl = 14400 # 4 hours
+    cache_level = "cache_everything"
+    edge_cache_ttl = 86400 # 1 day
+  }
+}
+
 # Cache Configuration
 # Using cache rules via ruleset instead of deprecated cache_rules
 resource "cloudflare_ruleset" "cache_rules" {
@@ -128,6 +165,33 @@ resource "cloudflare_ruleset" "cache_rules" {
     description = "Cache static assets"
     enabled     = true
   }
+  
+  # Additional rule for caching API responses
+  rules {
+    action = "set_cache_settings"
+    action_parameters {
+      edge_ttl {
+        mode    = "override_origin"
+        default = 300 # 5 minutes
+        status_code_ttl {
+          status_code = 200
+          value       = 300 # 5 minutes
+        }
+      }
+      cache = true
+      cache_key {
+        ignore_query_strings_order = false
+        custom_key {
+          query_string {
+            include = ["*"]
+          }
+        }
+      }
+    }
+    expression  = "(http.request.uri.path matches \"^/api/.*\") and (http.request.method eq \"GET\")"
+    description = "Cache GET API responses"
+    enabled     = true
+  }
 }
 
 # Firewall Rules
@@ -144,4 +208,18 @@ resource "cloudflare_ruleset" "security_rules" {
     description = "Block bad bots"
     enabled     = true
   }
+}
+
+# Argo Smart Routing (if enabled)
+resource "cloudflare_argo" "smart_routing" {
+  count   = var.enable_argo_smart_routing ? 1 : 0
+  zone_id = var.create_zone ? cloudflare_zone.project_zone[0].id : var.zone_id
+  smart_routing  = "on"
+}
+
+# Tiered Cache (replaces deprecated tiered_caching parameter)
+resource "cloudflare_tiered_cache" "tiered_caching" {
+  count   = var.enable_argo_smart_routing ? 1 : 0
+  zone_id = var.create_zone ? cloudflare_zone.project_zone[0].id : var.zone_id
+  cache_type = "smart"
 } 

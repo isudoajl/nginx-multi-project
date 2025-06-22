@@ -31,6 +31,8 @@ This directory contains Terraform configurations for managing Cloudflare resourc
    - `zone_id` - The ID of your existing Cloudflare zone (if `create_zone = false`)
    - `create_zone` - Whether to create a new zone or use an existing one
    - `zone_plan` - The Cloudflare plan to use (free, pro, business, enterprise)
+   - `enable_image_optimization` - Whether to enable Cloudflare Polish for image optimization
+   - `enable_argo_smart_routing` - Whether to enable Argo Smart Routing (requires Argo subscription)
 
 ### Initialization
 
@@ -76,6 +78,42 @@ This Terraform configuration creates and manages the following Cloudflare resour
 - Page rules for caching
 - Cache configuration
 - Firewall rules
+
+## Performance Optimization Features
+
+This configuration includes several performance optimization features:
+
+### Compression and Protocol Optimization
+- Brotli compression for faster content delivery
+- HTTP/2 and HTTP/3 support for improved connection efficiency
+- Early Hints for faster page loads
+- Zero Round Trip Time (0-RTT) for returning visitors
+
+### Caching Optimization
+- Browser cache TTL settings (4 hours default)
+- Edge cache configuration for static assets (30 days)
+- API response caching for GET requests (5 minutes)
+- Custom cache key configuration for query parameters
+
+### Content Optimization
+- Automatic minification of HTML, CSS, and JavaScript
+- Image optimization with Cloudflare Polish (lossless by default)
+- WebP conversion for supported browsers
+- Response buffering for smoother content delivery
+
+### Routing Optimization
+- Argo Smart Routing for optimized network paths (optional)
+- Tiered caching for improved cache hit rates
+
+## Testing
+
+To test the performance optimization configuration:
+
+```bash
+../tests/test-performance-optimization.sh
+```
+
+This script verifies that all performance optimization settings are correctly configured.
 
 ## Integration with Nginx
 

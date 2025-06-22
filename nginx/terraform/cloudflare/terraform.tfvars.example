@@ -4,4 +4,6 @@ origin_ip = "203.0.113.10"
 zone_id = "existing-zone-id" # Only if create_zone = false
 create_zone = false
 zone_plan = "free"
-account_id = "your-account-id" # Required for zone creation 
+account_id = "your-account-id" # Required for zone creation
+enable_image_optimization = true # Enable Cloudflare Polish for image optimization
+enable_argo_smart_routing = false # Enable only if you have Argo subscription 
