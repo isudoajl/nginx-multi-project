@@ -3,9 +3,6 @@ FROM nginx:alpine
 # Install required packages
 RUN apk add --no-cache openssl
 
-# Create nginx user
-RUN adduser -D -H -u 1000 -s /sbin/nologin nginx
-
 # Create required directories
 RUN mkdir -p /etc/nginx/conf.d/domains \
     && mkdir -p /etc/nginx/certs \
@@ -15,12 +12,9 @@ RUN mkdir -p /etc/nginx/conf.d/domains \
 # Generate DH parameters
 RUN openssl dhparam -out /etc/nginx/dhparam.pem 2048
 
-# Set permissions
-RUN chown -R nginx:nginx /var/log/nginx \
-    && chmod -R 755 /var/log/nginx
-
-# Switch to non-root user
-USER nginx
+# Set permissions for log files
+RUN touch /var/log/nginx/error.log /var/log/nginx/access.log \
+    && chmod 644 /var/log/nginx/error.log /var/log/nginx/access.log
 
 EXPOSE 80 443
 

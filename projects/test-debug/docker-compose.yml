@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  test-debug:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-debug
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ./html:/usr/share/nginx/html:ro
+      - ./logs:/var/log/nginx
+    restart: unless-stopped
+    networks:
+      - test-debug-network
+    environment:
+      - PROJECT_NAME=test-debug
+      - DOMAIN_NAME=test-debug.local
+
+networks:
+  test-debug-network:
+    driver: bridge

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  demo-project:
+    # Development-specific overrides
+    volumes:
+      # Add volume for live reloading
+      - ./html:/usr/share/nginx/html:ro
+      # Mount custom development configuration
+      - ./conf.d/dev:/etc/nginx/conf.d/dev:ro
+    environment:
+      # Development environment variables
+      - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+      - ENVIRONMENT=development
+    # Enable development ports
+    ports:
+      - "8090:80"
+    # Development-specific healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    # Development-specific restart policy
+    restart: unless-stopped
+    # Add development labels
+    labels:
+      - "dev.environment=true"
+      - "dev.project=demo-project"
+
+networks:
+  demo-project-network:
+    driver: bridge
+    # Development-specific network configuration
+    ipam:
+      config:
+        - subnet: 172.28.83.0/24 
