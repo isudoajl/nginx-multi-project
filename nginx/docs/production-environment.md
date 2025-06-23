@@ -22,6 +22,7 @@ The production environment is designed for high availability, security, and perf
 - **SSL/TLS**: Ensures secure communication with end-users
 - **Monitoring**: Tracks system health and performance metrics
 - **Logging**: Captures detailed information for troubleshooting and analysis
+- **Port Forwarding**: Handles privileged ports (80/443) redirection to non-privileged ports
 
 ### Environment-Specific Configuration
 
@@ -79,6 +80,61 @@ If issues are encountered after deployment:
 ```bash
 # Restore from the most recent backup
 ./nginx/scripts/prod/prod-deployment.sh --restore /path/to/backup
+```
+
+## Port Forwarding in Production
+
+In production environments, the Nginx proxy container listens on non-privileged ports (8080/8443) to avoid requiring root privileges. However, external users need to access the standard HTTP/HTTPS ports (80/443). To handle this, we use port forwarding.
+
+### Setting Up Port Forwarding
+
+```bash
+# Enter the Nix environment
+nix develop
+
+# Set up port forwarding (requires root privileges)
+sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
+```
+
+Alternatively, you can use the dedicated port forwarding script:
+
+```bash
+sudo ./scripts/setup-port-forwarding.sh
+```
+
+### How Port Forwarding Works
+
+The port forwarding setup:
+
+1. Creates iptables rules to redirect traffic from ports 80/443 to 8080/8443
+2. Makes these rules persistent across system reboots
+3. Creates a systemd service if needed for automatic startup
+
+### Traffic Flow with Port Forwarding
+
+```
+External Users → Port 80/443 → iptables Redirect → Ports 8080/8443 → Nginx Proxy Container
+```
+
+When combined with Cloudflare:
+
+```
+Users → Cloudflare Edge (Port 80/443) → Your Server (Port 80/443) → iptables Redirect → Ports 8080/8443 → Nginx Proxy
+```
+
+### Verifying Port Forwarding
+
+To verify that port forwarding is working correctly:
+
+```bash
+# Check the iptables rules
+sudo iptables -t nat -L PREROUTING
+
+# Test HTTP access
+curl -I http://your-domain.com
+
+# Test HTTPS access
+curl -k -I https://your-domain.com
 ```
 
 ## Certificate Management

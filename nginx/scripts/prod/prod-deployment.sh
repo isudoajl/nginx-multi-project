@@ -41,6 +41,7 @@ show_help() {
   echo -e "  --cert-renew    Renew SSL certificates"
   echo -e "  --cert-status   Check SSL certificate status"
   echo -e "  --validate      Validate the production configuration"
+  echo -e "  --port-forward  Set up port forwarding from 80/443 to 8080/8443"
   echo -e "  --help          Display this help message"
 }
 
@@ -265,6 +266,94 @@ check_certificate_status() {
   echo -e "${GREEN}Certificate status check completed${NC}"
 }
 
+# Function to set up port forwarding
+setup_port_forwarding() {
+  echo -e "${YELLOW}Setting up port forwarding for production environment...${NC}"
+  
+  # Check if running as root
+  if [ "$(id -u)" -ne 0 ]; then
+    echo -e "${RED}Error: Port forwarding setup requires root privileges${NC}"
+    echo -e "${YELLOW}Please run: sudo $0 --port-forward${NC}"
+    exit 1
+  fi
+  
+  # Check if iptables is installed
+  if ! command -v iptables &> /dev/null; then
+    echo -e "${RED}Error: iptables is not installed. Please install it first.${NC}"
+    exit 1
+  fi
+  
+  # Clear any existing rules for these ports
+  echo -e "${YELLOW}Removing any existing port forwarding rules...${NC}"
+  iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 2>/dev/null
+  iptables -t nat -D PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443 2>/dev/null
+  
+  # Add port forwarding rules
+  echo -e "${YELLOW}Adding port forwarding rules: 80→8080, 443→8443...${NC}"
+  iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+  iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+  
+  echo -e "${GREEN}Port forwarding configured successfully${NC}"
+  
+  # Make rules persistent
+  echo -e "${YELLOW}Making iptables rules persistent...${NC}"
+  
+  # Method 1: netfilter-persistent (Debian/Ubuntu)
+  if command -v netfilter-persistent &> /dev/null; then
+    netfilter-persistent save
+    echo -e "${GREEN}Rules saved permanently with netfilter-persistent${NC}"
+    
+  # Method 2: iptables-save to file (Generic Linux)
+  elif [ -d "/etc/iptables" ] || mkdir -p /etc/iptables &> /dev/null; then
+    iptables-save > /etc/iptables/rules.v4
+    echo -e "${GREEN}Rules saved to /etc/iptables/rules.v4${NC}"
+    
+    # Check if rules are loaded at boot
+    if [ ! -f "/etc/network/if-pre-up.d/iptables-restore" ]; then
+      cat > /etc/network/if-pre-up.d/iptables-restore << 'EOF'
+#!/bin/sh
+iptables-restore < /etc/iptables/rules.v4
+exit 0
+EOF
+      chmod +x /etc/network/if-pre-up.d/iptables-restore
+      echo -e "${GREEN}Created boot-time restoration script at /etc/network/if-pre-up.d/iptables-restore${NC}"
+    fi
+    
+  # Method 3: systemd service
+  else
+    echo -e "${YELLOW}Creating systemd service for persistent port forwarding...${NC}"
+    
+    cat > /etc/systemd/system/nginx-port-forward.service << 'EOF'
+[Unit]
+Description=Nginx Port Forwarding Service
+Documentation=https://github.com/yourusername/nginx-multi-project-INTEGRATION
+After=network.target
+Before=nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+ExecStart=/sbin/iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+ExecStop=/sbin/iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+ExecStop=/sbin/iptables -t nat -D PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    systemctl daemon-reload
+    systemctl enable nginx-port-forward
+    systemctl start nginx-port-forward
+    echo -e "${GREEN}Systemd service created and enabled${NC}"
+  fi
+  
+  echo -e "${GREEN}Port forwarding setup complete. Traffic will be forwarded from:${NC}"
+  echo -e "${GREEN}  - Port 80 → 8080${NC}"
+  echo -e "${GREEN}  - Port 443 → 8443${NC}"
+  echo -e "${GREEN}This enables external access to the Nginx proxy via standard HTTP/HTTPS ports${NC}"
+}
+
 # Process command line arguments
 if [ $# -eq 0 ]; then
   show_help
@@ -289,6 +378,9 @@ case "$1" in
     ;;
   --validate)
     validate_config
+    ;;
+  --port-forward)
+    setup_port_forwarding
     ;;
   --help)
     show_help
