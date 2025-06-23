@@ -173,81 +173,57 @@ resource "cloudflare_filter" "bad_bots" {
   description = "Bad bot filter"
   expression = "(http.user_agent contains \"nmap\") or (http.user_agent contains \"sqlmap\") or (http.user_agent contains \"nikto\")"
 }
+
+## Production Environment Integration
+
+### Server Configuration for Cloudflare
+
+In production environments, the Nginx proxy container typically runs on non-privileged ports (8080/8443) while external users need to access the standard HTTP/HTTPS ports (80/443). This is handled through port forwarding.
+
+#### Port Forwarding Configuration
+
+The system provides scripts to set up port forwarding from privileged ports to non-privileged ports:
+
+```bash
+# Using the production deployment script
+sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
+
+# Or using the dedicated script
+sudo ./scripts/setup-port-forwarding.sh
 ```
 
-### Variables Configuration (variables.tf)
+#### Complete Traffic Flow with Cloudflare
 
-```hcl
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token"
-  type        = string
-  sensitive   = true
-}
-
-variable "domain_name" {
-  description = "Domain name for the project"
-  type        = string
-}
-
-variable "origin_ip" {
-  description = "Origin server IP address"
-  type        = string
-}
-
-variable "zone_id" {
-  description = "Cloudflare Zone ID (if zone already exists)"
-  type        = string
-  default     = ""
-}
-
-variable "create_zone" {
-  description = "Whether to create a new zone or use an existing one"
-  type        = bool
-  default     = false
-}
-
-variable "zone_plan" {
-  description = "Cloudflare plan (free, pro, business, enterprise)"
-  type        = string
-  default     = "free"
-}
+```
+Internet Users → Cloudflare Edge (Port 80/443) → Origin Server (Port 80/443) → iptables Redirect → Nginx Proxy (Ports 8080/8443)
 ```
 
-### Example Variables File (terraform.tfvars.example)
+### Cloudflare IP Restriction
 
-```hcl
-cloudflare_api_token = "your-api-token"
-domain_name = "example.com"
-origin_ip = "203.0.113.10"
-zone_id = "existing-zone-id" # Only if create_zone = false
-create_zone = false
-zone_plan = "free"
-```
-
-## Nginx Configuration for Cloudflare
-
-### Proxy Configuration
-
-The central Nginx proxy should be configured to accept connections only from Cloudflare's IP ranges:
+The Nginx proxy is configured to only accept traffic from Cloudflare's IP ranges, enhancing security by ensuring all traffic passes through Cloudflare's protection:
 
 ```nginx
-# Include Cloudflare IP ranges
-include /etc/nginx/conf.d/cloudflare.conf;
+# Allow Cloudflare IPs only
+allow 173.245.48.0/20;
+allow 103.21.244.0/22;
+# ... other Cloudflare IP ranges ...
+
+# Deny all other IPs
+deny all;
 ```
 
-### Project Container Configuration
+### Real IP Configuration
 
-Project containers should be configured to work with Cloudflare:
+The proxy is configured to obtain the real client IP from Cloudflare's headers:
 
-1. **Real IP Configuration**
-   - Trust X-Forwarded-For headers from the proxy
-   - Use CF-Connecting-IP header for client IP
+```nginx
+# Real IP configuration
+real_ip_header CF-Connecting-IP;
+set_real_ip_from 173.245.48.0/20;
+# ... other Cloudflare IP ranges ...
+```
 
-2. **SSL/TLS Configuration**
-   - Set to "Full (Strict)" in Cloudflare
-   - Use valid certificates on the origin server
-
-## Terraform Workflow
+## Implementation Process
 
 1. **Initialization**
    ```bash

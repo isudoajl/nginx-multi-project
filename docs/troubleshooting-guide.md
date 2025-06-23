@@ -424,7 +424,7 @@ This guide provides solutions for common issues encountered when working with pr
 
 The Nginx proxy container needs to bind to ports 80 (HTTP) and 443 (HTTPS), which are privileged ports requiring root access on Linux systems. Here are several approaches to handle this issue:
 
-### Option 1: Use Linux Capabilities (Recommended)
+### Option 1: Use Linux Capabilities (Recommended for Local Development)
 
 Docker/Podman can grant specific capabilities to containers without giving them full root access. The `NET_BIND_SERVICE` capability allows binding to privileged ports:
 
@@ -439,7 +439,7 @@ services:
 
 This approach has been implemented in the proxy's docker-compose.yml file.
 
-### Option 2: Use Non-Privileged Ports
+### Option 2: Use Non-Privileged Ports (Default Approach)
 
 Map container's internal ports to non-privileged ports (>1024) on the host:
 
@@ -463,13 +463,56 @@ Run the container with sudo/root privileges:
 sudo ./scripts/manage-proxy.sh --action start
 ```
 
-### Option 4: Use a Port Forwarding Service
+### Option 4: Use Port Forwarding (Recommended for Production)
 
-Configure a system service like systemd to forward traffic from privileged ports to non-privileged ports:
+For production environments, we provide scripts to set up port forwarding from privileged ports to non-privileged ports:
+
+#### Using the Setup Script
 
 ```bash
-sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+# Run the dedicated port forwarding setup script
+sudo ./scripts/setup-port-forwarding.sh
+```
+
+This script will:
+1. Configure iptables rules to forward traffic from ports 80/443 to 8080/8443
+2. Make the rules persistent across reboots
+3. Create a systemd service if needed
+
+#### Using the Production Deployment Script
+
+```bash
+# Set up port forwarding as part of production deployment
+sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
+```
+
+#### Manual Systemd Service Installation
+
+```bash
+# Copy the service file
+sudo cp ./scripts/nginx-port-forward.service /etc/systemd/system/
+
+# Enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable nginx-port-forward
+sudo systemctl start nginx-port-forward
+```
+
+#### Verifying Port Forwarding
+
+To verify that port forwarding is working:
+
+```bash
+# Check iptables rules
+sudo iptables -t nat -L PREROUTING
+
+# Test HTTP connection
+curl -I http://localhost
+# Should show a connection to port 8080
+
+# Test HTTPS connection
+curl -k -I https://localhost
+# Should show a connection to port 8443
 ```
 
 ## Managing the Nginx Proxy
