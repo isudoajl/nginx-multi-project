@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Health Check</title>
+</head>
+<body>
+  <h1>Service is healthy</h1>
+  <p>Environment: Development</p>
+  <p>Project: second-app</p>
+  <p>Time: <span id="current-time"></span></p>
+  
+  <script>
+    document.getElementById('current-time').textContent = new Date().toISOString();
+  </script>
+</body>
+</html>

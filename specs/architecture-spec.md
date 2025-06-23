@@ -63,11 +63,32 @@ This document outlines the architecture for transforming the current monolithic 
 
 ## Container Network Isolation
 
-Each project container will operate on its own isolated network, with the proxy container being the only component with access to all project networks. This ensures:
+Each project container operates on its own isolated network, with the proxy container being the only component with access to all project networks. This ensures:
 
 1. Projects cannot directly communicate with each other
 2. External access is controlled exclusively through the proxy
 3. Security breaches in one project cannot affect others
+
+### Advanced Network Topology (Implemented 2025-06-23)
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   nginx-proxy   │    │   project-a     │    │   project-b     │
+│   (Port 8080)   │◄──►│   (Port 8090)   │    │   (Port 8091)   │
+│   (Port 8443)   │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └─────── nginx-proxy-network ──────────────────────┘
+                         │                       │
+            ┌─────────────────┐    ┌─────────────────┐
+            │  project-a-net  │    │  project-b-net  │
+            │   (Isolated)    │    │   (Isolated)    │
+            └─────────────────┘    └─────────────────┘
+```
+
+**Key Features:**
+- **Dual Network Membership**: Each project connects to both shared proxy network and isolated project network
+- **Zero-Downtime Integration**: New projects can be added without disrupting existing services
+- **Dynamic Network Management**: Automatic network creation and connection during deployment
 
 ## Security Architecture
 
@@ -150,12 +171,27 @@ Each project container will operate on its own isolated network, with the proxy 
 
 ## Deployment Workflow
 
-1. Project configuration generation
-2. Container image building
-3. Network setup
-4. Container deployment
-5. Proxy configuration update
-6. Health verification
-7. DNS updates (if applicable)
+### Standard Deployment (From Scratch)
+1. Proxy infrastructure detection and creation
+2. Project configuration generation
+3. Container image building
+4. Network setup
+5. Container deployment
+6. Proxy configuration update
+7. Health verification
+8. DNS updates (if applicable)
 
-This architecture ensures complete project isolation, eliminates single points of failure, provides production-grade security, and enables seamless scalability while maintaining ease of deployment and management. 
+### Incremental Deployment (New Feature - 2025-06-23)
+1. **Proxy Intelligence**: Automatic detection of existing proxy state
+2. **Ecosystem Preservation**: Validation that existing projects remain untouched
+3. **Dynamic Integration**: Seamless addition of new projects to running ecosystem
+4. **Hot Configuration Updates**: Live proxy configuration reloading without downtime
+5. **Comprehensive Verification**: End-to-end testing of new project integration
+
+**Deployment Capabilities:**
+- **From-Scratch**: Complete infrastructure creation when no proxy exists
+- **Incremental**: Adding projects to existing ecosystem without disruption
+- **Self-Healing**: Automatic recovery from partial failures
+- **Zero-Downtime**: Service continuity maintained throughout deployment process
+
+This architecture ensures complete project isolation, eliminates single points of failure, provides production-grade security, and enables seamless scalability while maintaining ease of deployment and management. The incremental deployment system now supports enterprise-grade operations with zero-downtime project additions to existing ecosystems. 

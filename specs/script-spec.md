@@ -74,10 +74,13 @@ function check_environment() {
   # Check Podman/Docker availability
 }
 
-# Function: Check proxy status
+# Function: Check proxy status (Enhanced 2025-06-23)
 function check_proxy() {
-  # Check if proxy container exists and is running
-  # Create or start if needed
+  # Intelligent proxy state detection:
+  # - Missing: Create complete proxy infrastructure
+  # - Stopped: Start existing proxy container
+  # - Running: Verify health and proceed
+  # - Corrupted: Clean up and recreate
 }
 
 # Function: Generate project files
@@ -98,17 +101,23 @@ function configure_pro_environment() {
   # Set up production settings
 }
 
-# Function: Deploy project container
+# Function: Deploy project container (Enhanced 2025-06-23)
 function deploy_project() {
   # Build and start the project container
-  # Update proxy configuration
-  # Reload proxy configuration
+  # Create isolated project network
+  # Connect to shared proxy network
+  # Update proxy configuration with zero-downtime
+  # Reload proxy configuration using hot reload
 }
 
-# Function: Verify deployment
+# Function: Verify deployment (Enhanced 2025-06-23)
 function verify_deployment() {
-  # Check container status
-  # Verify connectivity
+  # Check container status and health
+  # Verify proxy → project connectivity
+  # Test external HTTP/HTTPS routing
+  # Validate network isolation
+  # Verify existing projects remain untouched
+  # Comprehensive integration testing
 }
 
 # Main script execution
@@ -198,6 +207,60 @@ esac
 reload_proxy
 echo "Proxy configuration updated for project $PROJECT_NAME!"
 ```
+
+## Advanced Features (Implemented 2025-06-23)
+
+### Incremental Deployment System
+
+The enhanced `create-project.sh` script now supports intelligent incremental deployment, allowing new projects to be added to existing ecosystems without disrupting running services.
+
+#### Key Functions
+
+1. **`check_proxy()`** - Intelligent Proxy Detection
+   - Detects proxy container state (missing/stopped/running/corrupted)
+   - Automatically creates proxy infrastructure when missing
+   - Starts stopped proxy containers
+   - Validates proxy health before proceeding
+
+2. **`create_proxy_infrastructure()`** - Self-Healing Infrastructure
+   - Creates complete proxy from scratch when needed
+   - Generates fallback SSL certificates
+   - Sets up proxy networks and configurations
+   - Ensures proxy is ready for project integration
+
+3. **`verify_proxy_health()`** - Comprehensive Health Checks
+   - Validates proxy container status
+   - Tests proxy configuration syntax
+   - Verifies network connectivity
+   - Ensures proxy is ready for new projects
+
+4. **`integrate_with_proxy()`** - Zero-Downtime Integration
+   - Generates SSL certificates for new domains
+   - Creates domain configuration files
+   - Hot-reloads proxy configuration without downtime
+   - Connects new projects to shared proxy network
+
+#### Deployment Modes
+
+**Mode 1: From-Scratch Deployment**
+- Detects no proxy exists
+- Creates complete proxy infrastructure
+- Deploys first project with full setup
+
+**Mode 2: Incremental Deployment**
+- Detects existing proxy and projects
+- Preserves existing ecosystem completely
+- Adds new project without disruption
+- Validates existing projects remain functional
+
+#### Validation System
+
+The script performs comprehensive validation:
+- **Container Health**: All containers running and responsive
+- **Network Connectivity**: Proxy can reach all projects
+- **External Routing**: HTTP/HTTPS routing works correctly
+- **Security Consistency**: All security headers properly configured
+- **Ecosystem Preservation**: Existing projects remain untouched
 
 ## Support Script: `generate-certs.sh`
 

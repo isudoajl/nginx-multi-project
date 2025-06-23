@@ -1,0 +1,54 @@
+[2025-06-23 00:48:30] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:48:30] Using container engine: podman
+[2025-06-23 00:48:30] Starting Nginx proxy container
+[2025-06-23 00:48:30] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:48:39] Nginx proxy container started
+[2025-06-23 00:48:39] Access the proxy at: http://localhost:8080 or https://localhost:8443
+[2025-06-23 00:49:13] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:49:13] Using container engine: podman
+[2025-06-23 00:49:13] Starting Nginx proxy container
+[2025-06-23 00:49:13] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:49:30] Nginx proxy container started
+[2025-06-23 00:49:30] Access the proxy at: http://localhost:8080 or https://localhost:8443
+[2025-06-23 00:50:33] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:50:33] Using container engine: podman
+[2025-06-23 00:50:33] Starting Nginx proxy container
+[2025-06-23 00:50:33] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:50:36] Nginx proxy container started
+[2025-06-23 00:50:36] Access the proxy at: http://localhost:8080 or https://localhost:8443
+[2025-06-23 00:50:44] Warning: Using privileged ports (80, 443) requires root privileges.
+[2025-06-23 00:50:44] Consider using --non-root option or running with sudo.
+[2025-06-23 00:50:44] Using container engine: podman
+[2025-06-23 00:50:44] Stopping Nginx proxy container
+[2025-06-23 00:50:48] Nginx proxy container stopped
+[2025-06-23 00:50:56] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:50:56] Using container engine: podman
+[2025-06-23 00:50:56] Starting Nginx proxy container
+[2025-06-23 00:50:56] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:50:59] Nginx proxy container started
+[2025-06-23 00:50:59] Access the proxy at: http://localhost:8080 or https://localhost:8443
+[2025-06-23 00:55:15] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:55:15] Using container engine: podman
+[2025-06-23 00:55:15] Stopping Nginx proxy container
+[2025-06-23 00:55:15] ERROR: Failed to stop proxy container
+[2025-06-23 00:55:59] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:55:59] Using container engine: podman
+[2025-06-23 00:55:59] Stopping Nginx proxy container
+[2025-06-23 00:56:06] Nginx proxy container stopped
+[2025-06-23 00:56:06] Starting Nginx proxy container
+[2025-06-23 00:56:06] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:56:09] ERROR: Failed to start proxy container
+[2025-06-23 00:56:39] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:56:39] Using container engine: podman
+[2025-06-23 00:56:39] Starting Nginx proxy container
+[2025-06-23 00:56:39] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:56:43] Nginx proxy container started
+[2025-06-23 00:56:43] Access the proxy at: http://localhost:8080 or https://localhost:8443
+[2025-06-23 00:59:23] Using non-privileged ports: HTTP=8080, HTTPS=8443
+[2025-06-23 00:59:23] Using container engine: podman
+[2025-06-23 00:59:23] Stopping Nginx proxy container
+[2025-06-23 00:59:32] Nginx proxy container stopped
+[2025-06-23 00:59:32] Starting Nginx proxy container
+[2025-06-23 00:59:32] Updated ports in docker-compose.yml: HTTP=8080, HTTPS=8443
+[2025-06-23 00:59:35] Nginx proxy container started
+[2025-06-23 00:59:35] Access the proxy at: http://localhost:8080 or https://localhost:8443
