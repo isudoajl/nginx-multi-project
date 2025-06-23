@@ -12,6 +12,8 @@ This guide provides solutions for common issues encountered when working with pr
 6. [Proxy Integration Issues](#proxy-integration-issues)
 7. [Container Issues](#container-issues)
 8. [Nginx Configuration Issues](#nginx-configuration-issues)
+9. [Handling Privileged Ports (80/443) for Nginx Proxy](#handling-privileged-ports-80443-for-nginx-proxy)
+10. [Managing the Nginx Proxy](#managing-the-nginx-proxy)
 
 ---
 
@@ -415,3 +417,82 @@ This guide provides solutions for common issues encountered when working with pr
 2. Ensure Nginx user has read access to files
 3. Check SELinux contexts if applicable
 4. Verify directory permissions allow traversal 
+
+---
+
+## Handling Privileged Ports (80/443) for Nginx Proxy
+
+The Nginx proxy container needs to bind to ports 80 (HTTP) and 443 (HTTPS), which are privileged ports requiring root access on Linux systems. Here are several approaches to handle this issue:
+
+### Option 1: Use Linux Capabilities (Recommended)
+
+Docker/Podman can grant specific capabilities to containers without giving them full root access. The `NET_BIND_SERVICE` capability allows binding to privileged ports:
+
+```yaml
+# In docker-compose.yml
+services:
+  nginx-proxy:
+    # ...other settings...
+    cap_add:
+      - NET_BIND_SERVICE
+```
+
+This approach has been implemented in the proxy's docker-compose.yml file.
+
+### Option 2: Use Non-Privileged Ports
+
+Map container's internal ports to non-privileged ports (>1024) on the host:
+
+```yaml
+ports:
+  - "8080:80"  # Map container's port 80 to host's port 8080
+  - "8443:443" # Map container's port 443 to host's port 8443
+```
+
+Use the `--non-root` flag with the manage-proxy.sh script:
+
+```bash
+./scripts/manage-proxy.sh --action start --non-root
+```
+
+### Option 3: Run with Elevated Privileges
+
+Run the container with sudo/root privileges:
+
+```bash
+sudo ./scripts/manage-proxy.sh --action start
+```
+
+### Option 4: Use a Port Forwarding Service
+
+Configure a system service like systemd to forward traffic from privileged ports to non-privileged ports:
+
+```bash
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+```
+
+## Managing the Nginx Proxy
+
+Use the `manage-proxy.sh` script to control the Nginx proxy container:
+
+```bash
+# Start the proxy (requires root for privileged ports)
+sudo ./scripts/manage-proxy.sh --action start
+
+# Start the proxy with non-privileged ports (no root required)
+./scripts/manage-proxy.sh --action start --non-root
+
+# Stop the proxy
+./scripts/manage-proxy.sh --action stop
+
+# Restart the proxy
+./scripts/manage-proxy.sh --action restart
+
+# Check proxy status
+./scripts/manage-proxy.sh --action status
+```
+
+## Other Common Issues
+
+// ... existing code ... 

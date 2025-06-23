@@ -1,0 +1,245 @@
+---
+description: This rule governs debugging practices for multi-project Nginx architectures. It should be applied when: (1) Troubleshooting Nginx configuration issues, (2) Debugging container networking problems, (3) Investigating SSL/certificate issues, (4) Resolving proxy routing failures, or (5) Fixing automation script errors. The rule ensures systematic debugging approaches, proper environment validation, and safe configuration changes while maintaining security and stability. This is particularly critical for maintaining reliable microservices architecture and preventing cascading failures during debugging.
+globs:
+alwaysApply: true
+---
+# Nginx Multi-Project Architecture Debugging Expert
+
+## Critical Rules
+
+- ALWAYS use [nix --extra-experimental-features "nix-command flakes" develop --command] to enter the Nix environment before any operations
+- NEVER compromise security configurations (SSL settings, headers, rate limiting, firewall rules) to fix issues
+- NEVER remove important configurations (proxy routing, network isolation, certificate management) without understanding root cause
+- ALWAYS document failed approaches in this rule using the FAILED_APPROACHES tracking system below
+- ALWAYS verify container networking, DNS resolution, and port conflicts before making configuration changes
+- ALWAYS check logs in this order: container logs → nginx error logs → system logs → network diagnostics
+- ALWAYS test in development environment before applying fixes to production
+- ALWAYS backup configurations before making changes
+- ALWAYS validate nginx configuration syntax with `nginx -t` before reloading
+
+## Systematic Debugging Approach
+
+### 1. Initial Assessment (MANDATORY FIRST STEPS)
+- Check Nix environment: `nix --extra-experimental-features "nix-command flakes" develop --command echo "IN_NIX_SHELL: $IN_NIX_SHELL"`
+- Verify container status: `nix --extra-experimental-features "nix-command flakes" develop --command podman ps -a`
+- Check proxy container: `nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy`
+- Validate nginx config: `nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t`
+- Check network connectivity: `nix --extra-experimental-features "nix-command flakes" develop --command podman network ls`
+- Review recent changes in git status
+
+### 2. Component-Specific Debugging
+
+#### Proxy Container Issues
+- Check SSL certificate paths and permissions
+- Verify domain configurations in `proxy/conf.d/domains/`
+- Validate proxy routing to project containers
+- Check rate limiting and security headers
+- Verify network bridge connections
+
+#### Project Container Issues  
+- Verify container build and startup
+- Check internal port exposure and conflicts
+- Validate nginx configuration inside container
+- Check volume mounts and file permissions
+- Verify network connectivity to proxy
+
+#### Script/Automation Issues
+- Validate input parameters and environment variables
+- Check script permissions and execution context
+- Verify template file generation
+- Check integration between create-project.sh and proxy updates
+- Validate certificate generation and installation
+
+#### Environment Integration Issues
+- Check development vs production configuration differences
+- Verify Cloudflare integration settings (production)
+- Validate local DNS resolution (development)
+- Check port conflicts and host file updates
+- Verify SSL certificate management
+
+### 3. Network Troubleshooting Sequence
+- `nix --extra-experimental-features "nix-command flakes" develop --command podman network inspect <network-name>`
+- `nix --extra-experimental-features "nix-command flakes" develop --command podman exec <container> ping <target-container>`
+- `nix --extra-experimental-features "nix-command flakes" develop --command podman exec <container> curl -v http://<target>`
+- `ss -tlnp | grep <port>` for port conflicts
+- Check iptables/firewall rules if applicable
+
+## FAILED_APPROACHES Tracking System
+
+**INSTRUCTIONS: When an approach fails, document it here immediately to avoid repetition**
+
+### Network/Container Issues
+❌ **FAILED:** Starting proxy container with upstream reference to non-existent project container
+- **Problem:** nginx-proxy fails with "host not found in upstream 'demo-project'" error
+- **Why it failed:** Proxy container tried to start with domain config referencing demo-project container that wasn't running/reachable
+- **Better approach:** Ensure project containers are running and on correct network before starting proxy, or use conditional upstream checks
+
+❌ **FAILED:** Directly modifying docker-compose.yml network sections without understanding external network dependencies
+- **Problem:** Creates orphaned networks and connection failures
+- **Why it failed:** External networks require proper creation order and proxy coordination
+- **Better approach:** Use update-proxy.sh script or verify network creation sequence
+
+❌ **FAILED:** Removing SSL/TLS configurations to "simplify" debugging
+- **Problem:** Breaks security model and production parity
+- **Why it failed:** SSL is integral to the proxy routing and security headers
+- **Better approach:** Generate proper certificates or use development certificates
+
+❌ **FAILED:** Trying to create nginx user in Dockerfile when it already exists
+- **Problem:** Build fails with "adduser: user 'nginx' in use" error
+- **Why it failed:** nginx:alpine base image already has nginx user, attempting to create it again fails
+- **Better approach:** Check if user exists before creating, or modify existing user properties instead
+
+❌ **FAILED:** Connecting project container to proxy network but proxy can't resolve container hostname
+- **Problem:** nginx-proxy can't resolve "test-debug" hostname despite both containers running (curl: (6) Could not resolve host: test-debug)
+- **Why it failed:** Connecting only one container to the shared network doesn't ensure both containers can resolve each other's hostnames
+- **Better approach:** Ensure both containers are started on the same network from the beginning, or restart proxy container after network changes
+
+### Configuration Issues
+❌ **FAILED:** Using "if" directive in wrong context in security.conf
+- **Problem:** nginx fails with '"if" directive is not allowed here in /etc/nginx/conf.d/security.conf:25'
+- **Why it failed:** "if" directive can only be used in server or location contexts, not in http context
+- **Better approach:** Move "if" directives inside server blocks or use map directive in http context
+
+❌ **FAILED:** Using "location" directive in wrong context in security.conf
+- **Problem:** nginx fails with '"location" directive is not allowed here in /etc/nginx/conf.d/security.conf:25'
+- **Why it failed:** "location" directive can only be used in server contexts, not in http context
+- **Better approach:** Move location blocks to server context in main nginx.conf or create server-specific security files
+
+❌ **FAILED:** Running nginx as non-root user with log file permission issues
+- **Problem:** nginx fails with 'could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)'
+- **Why it failed:** Non-root nginx user doesn't have write permissions to /var/log/nginx/error.log
+- **Better approach:** Use stdout/stderr for logging in containers or set proper permissions in Dockerfile
+
+❌ **FAILED:** Running nginx as non-root user with cache directory permission issues
+- **Problem:** nginx fails with 'mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)'
+- **Why it failed:** Non-root nginx user doesn't have write permissions to create cache directories
+- **Better approach:** Create cache directories with proper permissions in Dockerfile or run as root user
+
+❌ **FAILED:** Setting log file permissions before switching to nginx user in Dockerfile
+- **Problem:** Persistent log permission errors despite containers running: 'could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)'
+- **Why it failed:** Dockerfile sets permissions as root but then switches to nginx user, causing permission conflicts
+- **Better approach:** Either stay as root user or properly set permissions after user switch, or use stdout/stderr logging in containers
+
+❌ **FAILED:** Domain configurations referencing non-existent upstream containers
+- **Problem:** nginx fails with '[emerg] 1#1: host not found in upstream "demo-project"' preventing all worker processes from starting
+- **Why it failed:** Even one bad domain configuration file with non-existent upstream prevents nginx from starting completely
+- **Better approach:** Remove or disable domain configurations for non-running containers, or use conditional upstream checks
+
+❌ **FAILED:** Default HTTPS server block without SSL certificates defined
+- **Problem:** nginx fails with '[emerg] no "ssl_certificate" is defined for the "listen ... ssl" directive' preventing startup
+- **Why it failed:** Default server blocks with SSL enabled require explicit certificate paths even if they only return 444 errors
+- **Better approach:** Add fallback SSL certificates to default server blocks or use separate non-SSL default servers
+
+### Script/Automation Issues  
+❌ **FAILED:**
+- **Problem:**
+- **Why it failed:**
+- **Better approach:**
+
+### Integration Issues
+❌ **FAILED:**
+- **Problem:**
+- **Why it failed:**  
+- **Better approach:**
+
+## Architecture-Specific Debugging Commands
+
+### Essential Debugging Commands
+```bash
+# Environment check
+nix --extra-experimental-features "nix-command flakes" develop --command bash -c "echo 'Nix Shell: $IN_NIX_SHELL' && podman --version"
+
+# Container debugging
+nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy --tail 10
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy cat /etc/nginx/conf.d/domains/*.conf
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy ps aux
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy netstat -tlnp
+
+# Network debugging  
+nix --extra-experimental-features "nix-command flakes" develop --command podman network ls
+nix --extra-experimental-features "nix-command flakes" develop --command podman inspect nginx-proxy | grep -A 10 "Networks"
+nix --extra-experimental-features "nix-command flakes" develop --command podman network connect nginx-proxy-network nginx-proxy
+
+# Internal connectivity testing
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy curl -I http://test-debug:80
+
+# Error log analysis
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy tail -20 /var/log/nginx/error.log
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy tail -10 /var/log/nginx/access.log
+
+# Integration testing
+nix --extra-experimental-features "nix-command flakes" develop --command curl -I -H "Host: test-debug.local" http://localhost:8080
+nix --extra-experimental-features "nix-command flakes" develop --command curl -k -I -H "Host: test-debug.local" --http1.1 https://localhost:8443
+
+# Project container debugging
+nix --extra-experimental-features "nix-command flakes" develop --command podman logs <project-name> --tail 10
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec <project-name> curl -I http://localhost
+
+# Script debugging
+nix --extra-experimental-features "nix-command flakes" develop --command bash -x ./scripts/create-project.sh --name test --domain test.local --env DEV
+```
+
+### Log Analysis Patterns
+- `502 Bad Gateway`: Usually proxy → project container connectivity
+- `404 Not Found`: Incorrect proxy routing or missing location blocks  
+- `SSL certificate problem`: Certificate path/permission issues
+- `Connection refused`: Container not running or port conflicts
+- `Name resolution failed`: DNS/networking issues
+- `host not found in upstream`: Referenced container not running or network misconfiguration
+
+## Security-Aware Debugging
+
+### NEVER Remove These Security Elements
+- SSL/TLS certificate configurations
+- Security headers (X-Frame-Options, CSP, etc.)
+- Rate limiting configurations  
+- Bad bot blocking rules
+- Network isolation between projects
+- Cloudflare IP restrictions (production)
+
+### Safe Debugging Modifications
+- Add temporary logging directives
+- Create test routes with specific log formats
+- Use debug containers on isolated networks
+- Add verbose curl commands for connectivity testing
+- Enable nginx debug mode temporarily: `error_log /var/log/nginx/debug.log debug;`
+
+## Project-Specific Quick Fixes
+
+### Common Resolution Patterns
+1. **Port conflicts**: Check `ss -tlnp`, update project port assignments
+2. **Network isolation broken**: Recreate networks with proper external references
+3. **Proxy routing failures**: Verify container naming consistency and network membership
+4. **Certificate issues**: Check paths, permissions, and regenerate if needed
+5. **Script failures**: Verify Nix environment and input parameter validation
+6. **Upstream host not found**: Ensure target containers are running and network-connected before starting proxy
+7. **Bad domain configs**: Remove domain configuration files for non-running containers
+8. **SSL config missing**: Add fallback SSL certificates to default HTTPS server blocks
+9. **No worker processes**: Check for `[emerg]` errors preventing nginx startup completely
+
+### Successful Integration Testing Patterns
+1. **HTTP Proxy Test**: `curl -I -H "Host: project.local" http://localhost:8080` should return `301 Moved Permanently`
+2. **Internal Connectivity**: `podman exec nginx-proxy curl -I http://project-name:80` should return `200 OK`
+3. **Network Verification**: Both containers should appear in same network via `podman inspect`
+4. **Worker Process Check**: `podman exec nginx-proxy ps aux` should show nginx master + worker processes
+5. **Port Binding**: `podman exec nginx-proxy netstat -tlnp` should show ports 80 and 443 listening
+
+## Examples
+
+<example>
+# Systematic debugging session
+1. Check environment: `nix --extra-experimental-features "nix-command flakes" develop --command echo "IN_NIX_SHELL: $IN_NIX_SHELL"`
+2. Container status: `nix --extra-experimental-features "nix-command flakes" develop --command podman ps | grep -E "(proxy|demo-project)"`
+3. Proxy logs: `nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy --tail 20`
+4. Config test: `nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t`
+5. Network test: `nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy ping demo-project`
+6. If issue found, document failed approach above before trying new solution
+</example>
+
+<example type="invalid">
+# Removing security configs to debug
+ssl_certificate off;  # NEVER do this
+# add_header X-Frame-Options ""; # NEVER remove security headers
+# Commenting out rate limiting # NEVER compromise security for debugging
+</example>
