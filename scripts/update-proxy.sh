@@ -130,7 +130,7 @@ server {
     
     # Proxy to project container
     location / {
-        proxy_pass http://${PROJECT_NAME}_container:${PORT};
+        proxy_pass http://${PROJECT_NAME}:${PORT};
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -151,6 +151,14 @@ server {
         internal;
     }
 }
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+    return 301 https://\$server_name\$request_uri;
+}
 EOF
 
   # Add network to docker-compose.yml
@@ -167,7 +175,7 @@ function remove_project() {
   echo "Removing project $PROJECT_NAME from proxy..."
   
   # Find the domain configuration file
-  DOMAIN_FILE=$(grep -l "${PROJECT_NAME}_container" ${PROXY_DOMAINS_DIR}/*.conf)
+  DOMAIN_FILE=$(grep -l "proxy_pass.*${PROJECT_NAME}:" ${PROXY_DOMAINS_DIR}/*.conf)
   
   if [[ -z "$DOMAIN_FILE" ]]; then
     echo "Error: No domain configuration found for project $PROJECT_NAME"
@@ -193,7 +201,7 @@ function update_project() {
   echo "Updating project $PROJECT_NAME in proxy..."
   
   # Find the domain configuration file
-  DOMAIN_FILE=$(grep -l "${PROJECT_NAME}_container" ${PROXY_DOMAINS_DIR}/*.conf)
+  DOMAIN_FILE=$(grep -l "proxy_pass.*${PROJECT_NAME}:" ${PROXY_DOMAINS_DIR}/*.conf)
   
   if [[ -z "$DOMAIN_FILE" ]]; then
     echo "Error: No domain configuration found for project $PROJECT_NAME"
@@ -209,7 +217,7 @@ function update_project() {
     add_project
   else
     # Update existing file with new port
-    sed -i "s/proxy_pass http:\/\/${PROJECT_NAME}_container:[0-9]*/proxy_pass http:\/\/${PROJECT_NAME}_container:${PORT}/" "$DOMAIN_FILE"
+    sed -i "s/proxy_pass http:\/\/${PROJECT_NAME}:[0-9]*/proxy_pass http:\/\/${PROJECT_NAME}:${PORT}/" "$DOMAIN_FILE"
     echo "Project $PROJECT_NAME updated in proxy configuration."
   fi
 }
@@ -218,13 +226,22 @@ function update_project() {
 function reload_proxy() {
   echo "Reloading proxy configuration..."
   
+  # Determine container engine (prefer podman, fallback to docker)
+  if command -v podman &> /dev/null; then
+    CONTAINER_ENGINE="podman"
+    COMPOSE_CMD="podman-compose"
+  else
+    CONTAINER_ENGINE="docker"
+    COMPOSE_CMD="docker-compose"
+  fi
+  
   # Check if proxy container is running
-  if docker ps | grep -q "nginx-proxy"; then
-    docker exec nginx-proxy nginx -s reload
+  if $CONTAINER_ENGINE ps | grep -q "nginx-proxy"; then
+    $CONTAINER_ENGINE exec nginx-proxy nginx -s reload
     echo "Proxy configuration reloaded."
   else
     echo "Proxy container is not running. Starting..."
-    cd "${PROXY_DIR}" && docker-compose up -d
+    cd "${PROXY_DIR}" && $COMPOSE_CMD up -d
     echo "Proxy container started."
   fi
 }
