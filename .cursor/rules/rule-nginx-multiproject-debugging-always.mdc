@@ -87,7 +87,7 @@ alwaysApply: true
 ❌ **FAILED:** Trying to create nginx user in Dockerfile when it already exists
 - **Problem:** Build fails with "adduser: user 'nginx' in use" error
 - **Why it failed:** nginx:alpine base image already has nginx user, attempting to create it again fails
-- **Better approach:** Check if user exists before creating, or modify existing user properties instead
+- **Better approach:** Check if user exists before creating, or modify existing user properties instead - CONFIRMED: nginx user exists in nginx:alpine base image, remove user creation commands
 
 ❌ **FAILED:** Connecting project container to proxy network but proxy can't resolve container hostname
 - **Problem:** nginx-proxy can't resolve "test-debug" hostname despite both containers running (curl: (6) Could not resolve host: test-debug)
@@ -101,9 +101,9 @@ alwaysApply: true
 - **Better approach:** Move "if" directives inside server blocks or use map directive in http context
 
 ❌ **FAILED:** Using "location" directive in wrong context in security.conf
-- **Problem:** nginx fails with '"location" directive is not allowed here in /etc/nginx/conf.d/security.conf:25'
-- **Why it failed:** "location" directive can only be used in server contexts, not in http context
-- **Better approach:** Move location blocks to server context in main nginx.conf or create server-specific security files
+- **Problem:** nginx fails with '"location" directive is not allowed here in /etc/nginx/conf.d/security.conf:25' or line 28
+- **Why it failed:** "location" directive can only be used in server contexts, not in http context - CONFIRMED: This error occurs repeatedly in project container security.conf files
+- **Better approach:** Move location blocks to server context in main nginx.conf or create server-specific security files, or remove location blocks from security.conf entirely
 
 ❌ **FAILED:** Running nginx as non-root user with log file permission issues
 - **Problem:** nginx fails with 'could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)'
@@ -130,11 +130,21 @@ alwaysApply: true
 - **Why it failed:** Default server blocks with SSL enabled require explicit certificate paths even if they only return 444 errors
 - **Better approach:** Add fallback SSL certificates to default server blocks or use separate non-SSL default servers
 
-### Script/Automation Issues  
-❌ **FAILED:**
-- **Problem:**
-- **Why it failed:**
-- **Better approach:**
+❌ **FAILED:** Old domain configuration files preventing proxy startup after cleanup
+- **Problem:** nginx fails with '[emerg] host not found in upstream "test-debug"' after container cleanup, preventing all worker processes from starting
+- **Why it failed:** Domain configuration files from previous sessions reference containers that no longer exist, causing nginx startup failure
+- **Better approach:** Always clean up domain configuration files in proxy/conf.d/domains/ when performing fresh deployments or when containers are removed
+
+### Script/Automation Issues
+❌ **FAILED:** Create-project script failing due to stale domain configurations
+- **Problem:** Enhanced create-project script fails during proxy health check because old domain configs reference non-existent containers
+- **Why it failed:** Script didn't clean up previous session's domain configurations before starting fresh deployment
+- **Better approach:** Add cleanup of proxy/conf.d/domains/*.conf files as part of fresh deployment process or proxy health verification
+
+❌ **FAILED:** Project container security.conf with location blocks in http context
+- **Problem:** nginx fails with '[emerg] "location" directive is not allowed here in /etc/nginx/conf.d/security.conf:28' preventing project container startup
+- **Why it failed:** Generated security.conf template includes location blocks that can only be used in server context, not http context
+- **Better approach:** Remove all location blocks from security.conf template and move security rules to server context in main nginx.conf
 
 ### Integration Issues
 ❌ **FAILED:**

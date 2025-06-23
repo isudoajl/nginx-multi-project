@@ -189,12 +189,233 @@ function parse_arguments() {
   fi
 }
 
-# Function: Check proxy status
+# Function: Check proxy status and create if needed
 function check_proxy() {
   log "Checking proxy status..."
   
-  # This is a stub for now - will be implemented in integration phase
-  log "Proxy check is currently a stub and will be implemented in the integration phase."
+  local proxy_container="nginx-proxy"
+  local proxy_dir="${PROJECT_ROOT}/proxy"
+  local proxy_network="nginx-proxy-network"
+  
+  # Check if proxy container exists and is running
+  if $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${proxy_container}$"; then
+    log "Proxy container '${proxy_container}' is already running"
+    PROXY_RUNNING=true
+  elif $CONTAINER_ENGINE ps -a --format "{{.Names}}" | grep -q "^${proxy_container}$"; then
+    log "Proxy container '${proxy_container}' exists but is stopped. Starting..."
+    cd "${proxy_dir}" || handle_error "Failed to change to proxy directory"
+    $CONTAINER_ENGINE start "${proxy_container}" || handle_error "Failed to start proxy container"
+    PROXY_RUNNING=true
+    log "Proxy container started successfully"
+  else
+    log "Proxy container '${proxy_container}' does not exist. Creating..."
+    create_proxy_infrastructure
+    PROXY_RUNNING=true
+  fi
+  
+  # Ensure proxy network exists
+  if ! $CONTAINER_ENGINE network ls --format "{{.Name}}" | grep -q "^${proxy_network}$"; then
+    log "Creating proxy network '${proxy_network}'..."
+    $CONTAINER_ENGINE network create "${proxy_network}" || handle_error "Failed to create proxy network"
+  fi
+  
+  # Verify proxy is healthy
+  if ! verify_proxy_health; then
+    handle_error "Proxy container is not healthy after startup"
+  fi
+  
+  log "Proxy status check completed successfully"
+}
+
+# Function: Create proxy infrastructure from scratch
+function create_proxy_infrastructure() {
+  log "Creating complete proxy infrastructure..."
+  
+  local proxy_dir="${PROJECT_ROOT}/proxy"
+  local proxy_network="nginx-proxy-network"
+  
+  # Ensure proxy directory exists
+  if [[ ! -d "${proxy_dir}" ]]; then
+    handle_error "Proxy directory '${proxy_dir}' does not exist. Please ensure the proxy configuration is available."
+  fi
+  
+  # Create proxy network
+  if ! $CONTAINER_ENGINE network ls --format "{{.Name}}" | grep -q "^${proxy_network}$"; then
+    log "Creating proxy network '${proxy_network}'..."
+    $CONTAINER_ENGINE network create "${proxy_network}" || handle_error "Failed to create proxy network"
+  fi
+  
+  # Generate proxy certificates if they don't exist
+  local proxy_certs_dir="${proxy_dir}/certs"
+  if [[ ! -f "${proxy_certs_dir}/fallback-cert.pem" ]]; then
+    log "Generating fallback SSL certificates for proxy..."
+    mkdir -p "${proxy_certs_dir}"
+    generate_fallback_certificates "${proxy_certs_dir}"
+  fi
+  
+  # Update proxy configuration to include fallback certificates
+  ensure_proxy_default_ssl "${proxy_dir}"
+  
+  # Build and start proxy container
+  log "Building and starting proxy container..."
+  cd "${proxy_dir}" || handle_error "Failed to change to proxy directory"
+  
+  # Use podman-compose or docker-compose based on available container engine
+  if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
+    if command -v podman-compose &> /dev/null; then
+      podman-compose up -d --build || handle_error "Failed to start proxy with podman-compose"
+    else
+      # Fallback to podman build and run
+      $CONTAINER_ENGINE build -t proxy_nginx-proxy . || handle_error "Failed to build proxy image"
+      $CONTAINER_ENGINE run -d --name nginx-proxy \
+        --network "${proxy_network}" \
+        -p 8080:80 -p 8443:443 \
+        -v "${proxy_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+        -v "${proxy_dir}/conf.d:/etc/nginx/conf.d:ro" \
+        -v "${proxy_dir}/certs:/etc/nginx/certs:ro" \
+        -v "${proxy_dir}/html:/usr/share/nginx/html:ro" \
+        -v "${proxy_dir}/logs:/var/log/nginx" \
+        proxy_nginx-proxy || handle_error "Failed to run proxy container"
+    fi
+  else
+    docker-compose up -d --build || handle_error "Failed to start proxy with docker-compose"
+  fi
+  
+  # Wait for proxy to be ready
+  log "Waiting for proxy to be ready..."
+  local max_attempts=30
+  local attempt=0
+  while [ $attempt -lt $max_attempts ]; do
+    if $CONTAINER_ENGINE exec nginx-proxy nginx -t &>/dev/null; then
+      log "Proxy is ready"
+      break
+    fi
+    sleep 2
+    ((attempt++))
+  done
+  
+  if [ $attempt -eq $max_attempts ]; then
+    handle_error "Proxy failed to become ready within timeout"
+  fi
+  
+  log "Proxy infrastructure created successfully"
+}
+
+# Function: Generate fallback SSL certificates
+function generate_fallback_certificates() {
+  local certs_dir="$1"
+  
+  log "Generating fallback SSL certificates..."
+  
+  # Create OpenSSL configuration for fallback certificate
+  cat > "${certs_dir}/fallback.cnf" << EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = California
+L = San Francisco
+O = Nginx Proxy
+OU = Development
+CN = nginx-proxy-fallback
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = nginx-proxy-fallback
+DNS.2 = localhost
+IP.1 = 127.0.0.1
+EOF
+
+  # Generate fallback certificate and key
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout "${certs_dir}/fallback-key.pem" \
+    -out "${certs_dir}/fallback-cert.pem" \
+    -config "${certs_dir}/fallback.cnf" \
+    -extensions v3_req || handle_error "Failed to generate fallback certificates"
+  
+  log "Fallback SSL certificates generated successfully"
+}
+
+# Function: Ensure proxy has default SSL configuration
+function ensure_proxy_default_ssl() {
+  local proxy_dir="$1"
+  local nginx_conf="${proxy_dir}/nginx.conf"
+  
+  # Check if nginx.conf has default SSL server block
+  if ! grep -q "ssl_certificate.*fallback-cert.pem" "${nginx_conf}"; then
+    log "Adding fallback SSL configuration to proxy nginx.conf..."
+    
+    # Create backup
+    cp "${nginx_conf}" "${nginx_conf}.backup.$(date +%s)"
+    
+    # Add fallback SSL certificates to default HTTPS server block
+    sed -i '/# Default HTTPS server/,/}/s|# ssl_certificate.*|ssl_certificate /etc/nginx/certs/fallback-cert.pem;\n        ssl_certificate_key /etc/nginx/certs/fallback-key.pem;|' "${nginx_conf}"
+    
+    log "Fallback SSL configuration added to proxy nginx.conf"
+  fi
+}
+
+# Function: Verify proxy health
+function verify_proxy_health() {
+  local max_attempts=10
+  local attempt=0
+  
+  log "Verifying proxy health..."
+  
+  while [ $attempt -lt $max_attempts ]; do
+    # Check if container is running
+    if ! $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^nginx-proxy$"; then
+      log "Proxy container is not running (attempt $((attempt + 1))/$max_attempts)"
+      sleep 3
+      ((attempt++))
+      continue
+    fi
+    
+    # Check if nginx configuration is valid
+    if ! $CONTAINER_ENGINE exec nginx-proxy nginx -t &>/dev/null; then
+      log "Proxy nginx configuration is invalid (attempt $((attempt + 1))/$max_attempts)"
+      sleep 3
+      ((attempt++))
+      continue
+    fi
+    
+    # Check if nginx processes are running
+    if ! $CONTAINER_ENGINE exec nginx-proxy ps aux | grep -q "[n]ginx.*worker"; then
+      log "Proxy nginx worker processes not found (attempt $((attempt + 1))/$max_attempts)"
+      sleep 3
+      ((attempt++))
+      continue
+    fi
+    
+    # Check if ports are accessible
+    if ! $CONTAINER_ENGINE exec nginx-proxy netstat -tlnp | grep -q ":80.*LISTEN"; then
+      log "Proxy port 80 not listening (attempt $((attempt + 1))/$max_attempts)"
+      sleep 3
+      ((attempt++))
+      continue
+    fi
+    
+    log "Proxy health verification successful"
+    return 0
+  done
+  
+  log "Proxy health verification failed after $max_attempts attempts"
+  # Get detailed error information
+  log "=== Proxy Container Status ==="
+  $CONTAINER_ENGINE ps -a | grep nginx-proxy || log "No proxy container found"
+  log "=== Proxy Logs ==="
+  $CONTAINER_ENGINE logs nginx-proxy --tail 20 || log "Cannot get proxy logs"
+  log "=== Proxy Configuration Test ==="
+  $CONTAINER_ENGINE exec nginx-proxy nginx -t || log "Configuration test failed"
+  
+  return 1
 }
 
 # Function: Generate project files
@@ -218,24 +439,16 @@ FROM nginx:alpine
 # Install required packages
 RUN apk add --no-cache curl
 
-# Create nginx user
-RUN adduser -D -H -u 1000 -s /sbin/nologin nginx
-
-# Create required directories
+# Create required directories and set permissions
 RUN mkdir -p /etc/nginx/conf.d \\
     && mkdir -p /usr/share/nginx/html \\
-    && mkdir -p /var/log/nginx
-
-# Set permissions
-RUN chown -R nginx:nginx /var/log/nginx \\
+    && mkdir -p /var/log/nginx \\
+    && chown -R nginx:nginx /var/log/nginx \\
     && chmod -R 755 /var/log/nginx
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
   CMD curl -f http://localhost/ || exit 1
-
-# Switch to non-root user
-USER nginx
 
 EXPOSE 80
 
@@ -318,6 +531,26 @@ http {
         add_header Content-Security-Policy "default-src 'self'; script-src 'self'; img-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" always;
 
+        # Security rules (must be in server context)
+        # Block WordPress and common CMS scanning
+        location ~* \.(php|asp|aspx|jsp|cgi)$ {
+            return 444;
+        }
+
+        # Block WordPress specific patterns
+        location ~* wp-(admin|includes|content|login) {
+            return 444;
+        }
+
+        # Block common vulnerability scanning paths
+        location ~* \.(git|svn|hg|bzr|cvs|env)(/.*)?$ {
+            return 444;
+        }
+
+        location ~* /(xmlrpc\.php|wp-config\.php|config\.php|configuration\.php|config\.inc\.php|settings\.php|settings\.inc\.php|\.env|\.git) {
+            return 444;
+        }
+
         # Static files handling
         location / {
             try_files \$uri \$uri/ =404;
@@ -361,33 +594,11 @@ map \$request_method \$method_allowed {
     ~*(TRACE|TRACK|DEBUG) 0;
 }
 
-# Return 444 for bad bots and unusual methods
-if (\$bad_bot = 1) {
-    return 444;
-}
+# Note: if directives for bad_bot and method_allowed are applied in server blocks
+# See nginx.conf server block for implementation
 
-if (\$method_allowed = 0) {
-    return 444;
-}
-
-# Block WordPress and common CMS scanning
-location ~* \.(php|asp|aspx|jsp|cgi)$ {
-    return 444;
-}
-
-# Block WordPress specific patterns
-location ~* wp-(admin|includes|content|login) {
-    return 444;
-}
-
-# Block common vulnerability scanning paths
-location ~* \.(git|svn|hg|bzr|cvs|env)(/.*)?$ {
-    return 444;
-}
-
-location ~* /(xmlrpc\.php|wp-config\.php|config\.php|configuration\.php|config\.inc\.php|settings\.php|settings\.inc\.php|\.env|\.git) {
-    return 444;
-}
+# Note: Location-based security rules moved to server context in nginx.conf
+# WordPress and vulnerability scanning protection implemented in main server block
 EOF
 
   # Create compression.conf
@@ -707,60 +918,324 @@ function deploy_project() {
   log "Deploying project container for $PROJECT_NAME..."
   
   local project_dir="${PROJECTS_DIR}/${PROJECT_NAME}"
+  local project_network="${PROJECT_NAME}-network"
+  local proxy_network="nginx-proxy-network"
+  
+  # Create project network
+  if ! $CONTAINER_ENGINE network ls --format "{{.Name}}" | grep -q "^${project_network}$"; then
+    log "Creating project network '${project_network}'..."
+    $CONTAINER_ENGINE network create "${project_network}" || handle_error "Failed to create project network"
+  fi
   
   # Build and start the container
   cd "$project_dir" || handle_error "Failed to change directory to $project_dir"
   
-  if [[ "$ENV_TYPE" == "DEV" ]]; then
-    log "Starting development environment..."
-    "${SCRIPT_DIR}/dev-environment.sh" --project "$PROJECT_NAME" --action start --port "$PROJECT_PORT" || handle_error "Failed to start development environment"
-  else
-    log "Building and starting production container..."
-    if [ "$CONTAINER_ENGINE" == "podman" ]; then
-      podman-compose up -d || handle_error "Failed to start production container"
-    else
-      docker-compose up -d || handle_error "Failed to start production container"
-    fi
+  log "Building project container..."
+  $CONTAINER_ENGINE build -t "${PROJECT_NAME}_${PROJECT_NAME}:latest" . || handle_error "Failed to build project container"
+  
+  # Remove existing container if it exists
+  if $CONTAINER_ENGINE ps -a --format "{{.Names}}" | grep -q "^${PROJECT_NAME}$"; then
+    log "Removing existing container '${PROJECT_NAME}'..."
+    $CONTAINER_ENGINE rm -f "${PROJECT_NAME}" || handle_error "Failed to remove existing container"
   fi
   
-  # Update proxy configuration (stub for now)
-  log "Updating proxy configuration (stub)..."
-  # This will be implemented in the integration phase
+  # Start the project container
+  log "Starting project container..."
+  $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+    --network "${project_network}" \
+    -p "${PROJECT_PORT}:80" \
+    -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+    -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+    -v "${project_dir}/html:/usr/share/nginx/html:ro" \
+    -v "${project_dir}/logs:/var/log/nginx" \
+    "${PROJECT_NAME}_${PROJECT_NAME}:latest" || handle_error "Failed to start project container"
+  
+  # Connect project container to proxy network
+  log "Connecting project container to proxy network..."
+  $CONTAINER_ENGINE network connect "${proxy_network}" "${PROJECT_NAME}" || handle_error "Failed to connect project to proxy network"
+  
+  # Wait for project container to be ready
+  log "Waiting for project container to be ready..."
+  local max_attempts=30
+  local attempt=0
+  while [ $attempt -lt $max_attempts ]; do
+    if $CONTAINER_ENGINE exec "${PROJECT_NAME}" nginx -t &>/dev/null; then
+      log "Project container is ready"
+      break
+    fi
+    sleep 2
+    ((attempt++))
+  done
+  
+  if [ $attempt -eq $max_attempts ]; then
+    handle_error "Project container failed to become ready within timeout"
+  fi
+  
+  # Update proxy configuration
+  log "Integrating project with proxy..."
+  integrate_with_proxy
   
   log "Project container deployed successfully for $PROJECT_NAME"
+}
+
+# Function: Integrate project with proxy
+function integrate_with_proxy() {
+  log "Integrating project '${PROJECT_NAME}' with proxy..."
+  
+  local proxy_domains_dir="${PROJECT_ROOT}/proxy/conf.d/domains"
+  local domain_conf="${proxy_domains_dir}/${DOMAIN_NAME}.conf"
+  
+  # Ensure domains directory exists
+  mkdir -p "${proxy_domains_dir}" || handle_error "Failed to create proxy domains directory"
+  
+  # Generate project certificates for proxy
+  local project_certs_dir="${PROJECT_ROOT}/proxy/certs/${DOMAIN_NAME}"
+  mkdir -p "${project_certs_dir}" || handle_error "Failed to create project certificates directory"
+  
+  # Generate certificates for the domain
+  generate_domain_certificates "${DOMAIN_NAME}" "${project_certs_dir}"
+  
+  # Create domain configuration for proxy
+  log "Creating domain configuration for '${DOMAIN_NAME}'..."
+  cat > "${domain_conf}" << EOF
+# Domain configuration for ${DOMAIN_NAME}
+# Generated automatically for project: ${PROJECT_NAME}
+
+# HTTPS server block
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+    
+    # SSL certificates
+    ssl_certificate /etc/nginx/certs/${DOMAIN_NAME}/cert.pem;
+    ssl_certificate_key /etc/nginx/certs/${DOMAIN_NAME}/cert-key.pem;
+    
+    # Include SSL settings
+    include /etc/nginx/conf.d/ssl-settings.conf;
+    
+    # Include security headers
+    include /etc/nginx/conf.d/security-headers.conf;
+    
+    # Security rules from variables defined in security-headers.conf
+    if (\$bad_bot = 1) {
+        return 444;
+    }
+
+    if (\$method_allowed = 0) {
+        return 444;
+    }
+    
+    # Apply rate limiting
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    # Proxy to project container
+    location / {
+        proxy_pass http://${PROJECT_NAME}:80;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Buffer settings
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+        proxy_busy_buffers_size 8k;
+    }
+    
+    # Health check endpoint
+    location /health {
+        proxy_pass http://${PROJECT_NAME}:80/health;
+        access_log off;
+    }
+    
+    # Custom error handling
+    error_page 502 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+        internal;
+    }
+}
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+    
+    # Apply rate limiting to HTTP as well
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    return 301 https://\$server_name\$request_uri;
+}
+EOF
+  
+  # Reload proxy configuration
+  log "Reloading proxy configuration..."
+  if $CONTAINER_ENGINE exec nginx-proxy nginx -t; then
+    $CONTAINER_ENGINE exec nginx-proxy nginx -s reload || handle_error "Failed to reload proxy configuration"
+    log "Proxy configuration reloaded successfully"
+  else
+    handle_error "Invalid nginx configuration in proxy. Check domain configuration for ${DOMAIN_NAME}"
+  fi
+  
+  log "Project '${PROJECT_NAME}' successfully integrated with proxy"
+}
+
+# Function: Generate domain certificates
+function generate_domain_certificates() {
+  local domain="$1"
+  local certs_dir="$2"
+  
+  log "Generating SSL certificates for domain '${domain}'..."
+  
+  # Create OpenSSL configuration for domain certificate
+  cat > "${certs_dir}/openssl.cnf" << EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = California
+L = San Francisco
+O = ${PROJECT_NAME}
+OU = Development
+CN = ${domain}
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${domain}
+DNS.2 = www.${domain}
+DNS.3 = localhost
+IP.1 = 127.0.0.1
+EOF
+
+  # Generate certificate and key
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout "${certs_dir}/cert-key.pem" \
+    -out "${certs_dir}/cert.pem" \
+    -config "${certs_dir}/openssl.cnf" \
+    -extensions v3_req || handle_error "Failed to generate certificates for ${domain}"
+  
+  log "SSL certificates generated successfully for domain '${domain}'"
 }
 
 # Function: Verify deployment
 function verify_deployment() {
   log "Verifying deployment for $PROJECT_NAME..."
   
-  local project_dir="${PROJECTS_DIR}/${PROJECT_NAME}"
   local container_name="$PROJECT_NAME"
+  local proxy_container="nginx-proxy"
   
-  # Check if container is running
-  if [ "$CONTAINER_ENGINE" == "podman" ]; then
-    if ! podman ps | grep -q "$container_name"; then
-      handle_error "Container $container_name is not running"
-    fi
+  # Check if project container is running
+  if ! $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
+    handle_error "Project container '${container_name}' is not running"
+  fi
+  log "✓ Project container '${container_name}' is running"
+  
+  # Check if proxy container is running
+  if ! $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${proxy_container}$"; then
+    handle_error "Proxy container '${proxy_container}' is not running"
+  fi
+  log "✓ Proxy container '${proxy_container}' is running"
+  
+  # Check project container health
+  log "Checking project container health..."
+  if ! $CONTAINER_ENGINE exec "${container_name}" nginx -t &>/dev/null; then
+    handle_error "Project container nginx configuration is invalid"
+  fi
+  log "✓ Project container nginx configuration is valid"
+  
+  # Test direct access to project container
+  log "Testing direct access to project container..."
+  local direct_response=$($CONTAINER_ENGINE exec "${container_name}" curl -s -o /dev/null -w "%{http_code}" "http://localhost/" 2>/dev/null || echo "000")
+  if [[ "$direct_response" != "200" ]]; then
+    log "WARNING: Direct access to project container failed (HTTP $direct_response)"
   else
-    if ! docker ps | grep -q "$container_name"; then
-      handle_error "Container $container_name is not running"
-    fi
+    log "✓ Direct access to project container is working (HTTP $direct_response)"
   fi
   
-  log "Container $container_name is running"
-  
-  # In development mode, check if the site is accessible
-  if [[ "$ENV_TYPE" == "DEV" ]]; then
-    log "Checking if site is accessible at http://localhost:${PROJECT_PORT}..."
-    if ! curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PROJECT_PORT}" | grep -q "200"; then
-      log "WARNING: Site is not accessible at http://localhost:${PROJECT_PORT}"
-    else
-      log "Site is accessible at http://localhost:${PROJECT_PORT}"
-    fi
+  # Test internal network connectivity from proxy to project
+  log "Testing proxy → project container connectivity..."
+  local proxy_to_project_response=$($CONTAINER_ENGINE exec nginx-proxy curl -s -o /dev/null -w "%{http_code}" "http://${container_name}:80/" 2>/dev/null || echo "000")
+  if [[ "$proxy_to_project_response" != "200" ]]; then
+    log "WARNING: Proxy cannot reach project container (HTTP $proxy_to_project_response)"
+  else
+    log "✓ Proxy → project container connectivity is working (HTTP $proxy_to_project_response)"
   fi
   
-  log "Deployment verification completed for $PROJECT_NAME"
+  # Test external HTTP access through proxy
+  log "Testing external HTTP access through proxy..."
+  local external_http_response=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: ${DOMAIN_NAME}" "http://localhost:8080/" 2>/dev/null || echo "000")
+  if [[ "$external_http_response" == "301" ]]; then
+    log "✓ HTTP → HTTPS redirect is working (HTTP $external_http_response)"
+  elif [[ "$external_http_response" == "200" ]]; then
+    log "✓ HTTP access through proxy is working (HTTP $external_http_response)"
+  else
+    log "WARNING: External HTTP access failed (HTTP $external_http_response)"
+  fi
+  
+  # Test external HTTPS access through proxy
+  log "Testing external HTTPS access through proxy..."
+  local external_https_response=$(curl -k -s -o /dev/null -w "%{http_code}" -H "Host: ${DOMAIN_NAME}" "https://localhost:8443/" 2>/dev/null || echo "000")
+  if [[ "$external_https_response" == "200" ]]; then
+    log "✓ HTTPS access through proxy is working (HTTP $external_https_response)"
+  else
+    log "WARNING: External HTTPS access failed (HTTP $external_https_response)"
+  fi
+  
+  # Check network connectivity
+  log "Verifying network connectivity..."
+  local proxy_networks=$($CONTAINER_ENGINE inspect nginx-proxy --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null || echo "")
+  local project_networks=$($CONTAINER_ENGINE inspect "${container_name}" --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null || echo "")
+  
+  if [[ "$proxy_networks" == *"nginx-proxy-network"* ]] && [[ "$project_networks" == *"nginx-proxy-network"* ]]; then
+    log "✓ Both containers are connected to nginx-proxy-network"
+  else
+    log "WARNING: Network connectivity issue detected"
+    log "  Proxy networks: $proxy_networks"
+    log "  Project networks: $project_networks"
+  fi
+  
+  # Show deployment summary
+  log "=== DEPLOYMENT SUMMARY ==="
+  log "Project Name: $PROJECT_NAME"
+  log "Domain Name: $DOMAIN_NAME"
+  log "Project Port: $PROJECT_PORT"
+  log "Project Container: ${container_name} ($(if $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${container_name}$"; then echo "RUNNING"; else echo "STOPPED"; fi))"
+  log "Proxy Container: ${proxy_container} ($(if $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${proxy_container}$"; then echo "RUNNING"; else echo "STOPPED"; fi))"
+  log "Direct Access: http://localhost:${PROJECT_PORT}"
+  log "Proxy HTTP: http://localhost:8080 (Host: ${DOMAIN_NAME})"
+  log "Proxy HTTPS: https://localhost:8443 (Host: ${DOMAIN_NAME})"
+  log "=========================="
+  
+  # Final health check
+  if $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${container_name}$" && \
+     $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${proxy_container}$" && \
+     [[ "$proxy_to_project_response" == "200" ]]; then
+    log "✅ DEPLOYMENT VERIFICATION SUCCESSFUL"
+    return 0
+  else
+    log "❌ DEPLOYMENT VERIFICATION FAILED"
+    log "Please check the logs and container status for troubleshooting"
+    return 1
+  fi
 }
 
 # Main script execution

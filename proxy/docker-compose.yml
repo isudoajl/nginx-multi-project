@@ -20,13 +20,10 @@ services:
       - ./logs:/var/log/nginx
     restart: unless-stopped
     networks:
-      - proxy-network
-      - demo-project-network
+      - nginx-proxy-network
       # Project networks will be added dynamically
 
 networks:
-  demo-project-network:
-    external: true
-  proxy-network:
+  nginx-proxy-network:
     driver: bridge
   # Project networks will be added dynamically 

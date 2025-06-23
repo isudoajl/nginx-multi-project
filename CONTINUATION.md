@@ -118,17 +118,45 @@ podman exec nginx-proxy curl -I http://test-debug:80
 
 The architecture is **production-ready** for the core use case of hosting multiple independent projects through a single nginx proxy with domain-based routing.
 
+## 🔧 CRITICAL ISSUE DISCOVERED & RESOLVED
+
+### **Hardcoded Values in Proxy Integration Scripts**
+
+**Problem Identified:** During the debugging process, hardcoded values were introduced that would prevent the solution from working generically for new projects.
+
+**Root Cause Analysis:**
+- **Container Naming Inconsistency:** `create-project.sh` generates containers named `${PROJECT_NAME}` but `update-proxy.sh` expected `${PROJECT_NAME}_container`
+- **Manual Debug Configs:** The `test-debug.local.conf` file was manually created with hardcoded references
+- **Missing Template Completeness:** HTTP redirect section was missing from the automated template
+
+**Solutions Implemented:**
+1. **Fixed Container Naming:** Updated `update-proxy.sh` to use `${PROJECT_NAME}:${PORT}` instead of `${PROJECT_NAME}_container:${PORT}`
+2. **Added Missing Template Sections:** Added HTTP→HTTPS redirect section to domain configuration template
+3. **Container Engine Compatibility:** Added Podman detection to `update-proxy.sh` for this environment
+4. **Search Pattern Fixes:** Updated remove/update functions to correctly identify project configurations
+
+**Status:** ✅ **RESOLVED** - Scripts now properly generic (Commit: `9db3361`)
+
+**Testing Status:** ⚠️ **UNTESTED** - Current test-debug setup still works, but new project creation workflow needs validation
+
 ## 📝 NEXT STEPS RECOMMENDATIONS
 
-1. **Complete HTTPS integration** - Debug host header matching for HTTPS requests
-2. **Add more project containers** - Test scaling with multiple active projects
-3. **Production deployment** - Deploy to production environment with real domains
-4. **Monitoring setup** - Add logging and monitoring for production operations
-5. **Documentation completion** - Update user guides with successful testing procedures
+### **IMMEDIATE PRIORITY**
+1. **Test Generic Project Creation** - Validate that `create-project.sh` + `update-proxy.sh` workflow works end-to-end
+2. **Integration Testing** - Create a new test project to verify the fixed scripts work generically
+
+### **SECONDARY OBJECTIVES**
+3. **Complete HTTPS integration** - Debug host header matching for HTTPS requests
+4. **Add more project containers** - Test scaling with multiple active projects
+5. **Production deployment** - Deploy to production environment with real domains
+6. **Monitoring setup** - Add logging and monitoring for production operations
+7. **Documentation completion** - Update user guides with successful testing procedures
 
 ---
 
-**Generated:** 2025-06-23 18:32:00 UTC  
+**Generated:** 2025-06-23 20:20:00 UTC  
 **Architecture Status:** ✅ **OPERATIONAL**  
 **Integration Test:** ✅ **PASSED**  
-**Containers Active:** 2/3 (nginx-proxy, test-debug) 
+**Script Genericity:** ✅ **FIXED (UNTESTED)**  
+**Containers Active:** 2/3 (nginx-proxy, test-debug)  
+**Latest Commit:** `9db3361` - Hardcoded values removal 

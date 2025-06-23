@@ -1,0 +1,23 @@
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = California
+L = San Francisco
+O = fresh-test
+OU = Development
+CN = fresh-test.local
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = fresh-test.local
+DNS.2 = www.fresh-test.local
+DNS.3 = localhost
+IP.1 = 127.0.0.1
