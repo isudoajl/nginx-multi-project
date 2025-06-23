@@ -53,3 +53,82 @@
 [2025-06-23 00:09:56] Development environment started for project: test-project
 [2025-06-23 00:09:56] Access the project at: http://localhost:8088
 [2025-06-23 00:09:56] Action 'start' completed successfully for project: test-project
+[2025-06-23 00:47:22] Using container engine: podman
+[2025-06-23 00:47:22] Setting up development environment for project: demo-project
+[2025-06-23 00:47:22] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/demo-project/docker-compose.override.yml
+[2025-06-23 00:47:22] Development environment setup completed for project: demo-project
+[2025-06-23 00:47:22] Action 'setup' completed successfully for project: demo-project
+[2025-06-23 00:47:22] Using container engine: podman
+[2025-06-23 00:47:22] Starting development environment for project: demo-project
+[2025-06-23 00:47:24] Development environment started for project: demo-project
+[2025-06-23 00:47:24] Access the project at: http://localhost:8090
+[2025-06-23 00:47:24] Action 'start' completed successfully for project: demo-project
+[2025-06-23 00:48:08] Using container engine: podman
+[2025-06-23 00:48:08] Starting development environment for project: demo-project
+[2025-06-23 00:48:11] Development environment started for project: demo-project
+[2025-06-23 00:48:11] Access the project at: http://localhost:8080
+[2025-06-23 00:48:11] Action 'start' completed successfully for project: demo-project
+[2025-06-23 00:52:38] ERROR: Action must be one of: setup, start, stop, reload.
+[2025-06-23 00:52:51] Using container engine: podman
+[2025-06-23 00:52:51] Stopping development environment for project: demo-project
+[2025-06-23 00:52:52] Development environment stopped for project: demo-project
+[2025-06-23 00:52:52] Action 'stop' completed successfully for project: demo-project
+[2025-06-23 00:53:02] Using container engine: podman
+[2025-06-23 00:53:02] Starting development environment for project: demo-project
+[2025-06-23 00:53:05] Development environment started for project: demo-project
+[2025-06-23 00:53:05] Access the project at: http://localhost:8080
+[2025-06-23 00:53:05] Action 'start' completed successfully for project: demo-project
+[2025-06-23 00:58:08] Using container engine: podman
+[2025-06-23 00:58:08] Starting development environment for project: demo-project
+[2025-06-23 00:58:09] Development environment started for project: demo-project
+[2025-06-23 00:58:09] Access the project at: http://localhost:8080
+[2025-06-23 00:58:09] Action 'start' completed successfully for project: demo-project
+[2025-06-23 01:02:40] Using container engine: podman
+[2025-06-23 01:02:41] Stopping development environment for project: demo-project
+[2025-06-23 01:02:44] Development environment stopped for project: demo-project
+[2025-06-23 01:02:44] Action 'stop' completed successfully for project: demo-project
+[2025-06-23 01:03:08] Using container engine: podman
+[2025-06-23 01:03:08] Starting development environment for project: demo-project
+[2025-06-23 01:03:10] Development environment started for project: demo-project
+[2025-06-23 01:03:10] Access the project at: http://localhost:8080
+[2025-06-23 01:03:10] Action 'start' completed successfully for project: demo-project
+[2025-06-23 01:04:09] Using container engine: podman
+[2025-06-23 01:04:09] Starting development environment for project: demo-project
+[2025-06-23 01:04:11] Development environment started for project: demo-project
+[2025-06-23 01:04:11] Access the project at: http://localhost:8080
+[2025-06-23 01:04:12] Action 'start' completed successfully for project: demo-project
+[2025-06-23 18:57:57] Using container engine: podman
+[2025-06-23 18:57:57] Setting up development environment for project: test-debug
+[2025-06-23 18:57:57] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/test-debug/docker-compose.override.yml
+[2025-06-23 18:57:57] Development environment setup completed for project: test-debug
+[2025-06-23 18:57:57] Action 'setup' completed successfully for project: test-debug
+[2025-06-23 18:57:57] Using container engine: podman
+[2025-06-23 18:57:57] Starting development environment for project: test-debug
+[2025-06-23 18:57:59] Development environment started for project: test-debug
+[2025-06-23 18:57:59] Access the project at: http://localhost:8091
+[2025-06-23 18:57:59] Action 'start' completed successfully for project: test-debug
+[2025-06-23 20:40:41] Using container engine: podman
+[2025-06-23 20:40:41] Setting up development environment for project: fresh-test
+[2025-06-23 20:40:41] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/fresh-test/docker-compose.override.yml
+[2025-06-23 20:40:41] Development environment setup completed for project: fresh-test
+[2025-06-23 20:40:41] Action 'setup' completed successfully for project: fresh-test
+[2025-06-23 20:41:18] Using container engine: podman
+[2025-06-23 20:41:18] Setting up development environment for project: fresh-test
+[2025-06-23 20:41:18] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/fresh-test/docker-compose.override.yml
+[2025-06-23 20:41:18] Development environment setup completed for project: fresh-test
+[2025-06-23 20:41:18] Action 'setup' completed successfully for project: fresh-test
+[2025-06-23 20:43:16] Using container engine: podman
+[2025-06-23 20:43:16] Setting up development environment for project: fresh-test
+[2025-06-23 20:43:16] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/fresh-test/docker-compose.override.yml
+[2025-06-23 20:43:16] Development environment setup completed for project: fresh-test
+[2025-06-23 20:43:16] Action 'setup' completed successfully for project: fresh-test
+[2025-06-23 20:46:55] Using container engine: podman
+[2025-06-23 20:46:55] Setting up development environment for project: fresh-test
+[2025-06-23 20:46:55] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/fresh-test/docker-compose.override.yml
+[2025-06-23 20:46:55] Development environment setup completed for project: fresh-test
+[2025-06-23 20:46:55] Action 'setup' completed successfully for project: fresh-test
+[2025-06-23 20:57:07] Using container engine: podman
+[2025-06-23 20:57:07] Setting up development environment for project: second-app
+[2025-06-23 20:57:07] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/second-app/docker-compose.override.yml
+[2025-06-23 20:57:07] Development environment setup completed for project: second-app
+[2025-06-23 20:57:07] Action 'setup' completed successfully for project: second-app

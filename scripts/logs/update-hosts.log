@@ -8,3 +8,55 @@
 [2025-06-22 23:44:23] Could not determine method to flush DNS cache. You may need to restart your browser.
 [2025-06-22 23:44:23] Current hosts file entries for nginx-multi-project:
 [2025-06-22 23:44:23] Hosts file update completed successfully
+[2025-06-23 00:47:20] Adding domain demo.local.test to hosts file with IP 127.0.0.1
+[2025-06-23 00:47:20] Removing domain demo.local.test from hosts file
+[2025-06-23 00:47:20] Domain demo.local.test successfully removed from hosts file
+[2025-06-23 00:47:20] Attempting to flush DNS cache
+[2025-06-23 00:47:21] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 00:47:21] Domain demo.local.test successfully added to hosts file
+[2025-06-23 00:47:21] Attempting to flush DNS cache
+[2025-06-23 00:47:22] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 00:47:22] Current hosts file entries for nginx-multi-project:
+[2025-06-23 00:47:22] Hosts file update completed successfully
+[2025-06-23 18:57:54] Adding domain test-debug.local to hosts file with IP 127.0.0.1
+[2025-06-23 18:57:54] Removing domain test-debug.local from hosts file
+[2025-06-23 18:57:54] Domain test-debug.local successfully removed from hosts file
+[2025-06-23 18:57:54] Attempting to flush DNS cache
+[2025-06-23 18:57:56] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 18:57:56] Domain test-debug.local successfully added to hosts file
+[2025-06-23 18:57:56] Attempting to flush DNS cache
+[2025-06-23 18:57:57] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 18:57:57] Current hosts file entries for nginx-multi-project:
+[2025-06-23 18:57:57] Hosts file update completed successfully
+[2025-06-23 20:40:39] Adding domain fresh-test.local to hosts file with IP 127.0.0.1
+[2025-06-23 20:40:39] Removing domain fresh-test.local from hosts file
+[2025-06-23 20:40:39] Domain fresh-test.local successfully removed from hosts file
+[2025-06-23 20:40:39] Attempting to flush DNS cache
+[2025-06-23 20:40:40] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 20:40:40] Domain fresh-test.local successfully added to hosts file
+[2025-06-23 20:40:40] Attempting to flush DNS cache
+[2025-06-23 20:40:41] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 20:40:41] Current hosts file entries for nginx-multi-project:
+[2025-06-23 20:40:41] Hosts file update completed successfully
+[2025-06-23 20:41:18] Adding domain fresh-test.local to hosts file with IP 127.0.0.1
+[2025-06-23 20:41:18] Domain fresh-test.local is already in hosts file with IP 127.0.0.1
+[2025-06-23 20:41:18] Current hosts file entries for nginx-multi-project:
+[2025-06-23 20:41:18] Hosts file update completed successfully
+[2025-06-23 20:43:16] Adding domain fresh-test.local to hosts file with IP 127.0.0.1
+[2025-06-23 20:43:16] Domain fresh-test.local is already in hosts file with IP 127.0.0.1
+[2025-06-23 20:43:16] Current hosts file entries for nginx-multi-project:
+[2025-06-23 20:43:16] Hosts file update completed successfully
+[2025-06-23 20:46:55] Adding domain fresh-test.local to hosts file with IP 127.0.0.1
+[2025-06-23 20:46:55] Domain fresh-test.local is already in hosts file with IP 127.0.0.1
+[2025-06-23 20:46:55] Current hosts file entries for nginx-multi-project:
+[2025-06-23 20:46:55] Hosts file update completed successfully
+[2025-06-23 20:57:05] Adding domain second-app.local to hosts file with IP 127.0.0.1
+[2025-06-23 20:57:05] Removing domain second-app.local from hosts file
+[2025-06-23 20:57:05] Domain second-app.local successfully removed from hosts file
+[2025-06-23 20:57:05] Attempting to flush DNS cache
+[2025-06-23 20:57:06] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 20:57:06] Domain second-app.local successfully added to hosts file
+[2025-06-23 20:57:06] Attempting to flush DNS cache
+[2025-06-23 20:57:07] Could not determine method to flush DNS cache. You may need to restart your browser.
+[2025-06-23 20:57:07] Current hosts file entries for nginx-multi-project:
+[2025-06-23 20:57:07] Hosts file update completed successfully
