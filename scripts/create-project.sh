@@ -995,6 +995,26 @@ function integrate_with_proxy() {
   # Generate certificates for the domain
   generate_domain_certificates "${DOMAIN_NAME}" "${project_certs_dir}"
   
+  # Get project container IP address for reliable connectivity
+  log "Getting project container IP address..."
+  local project_container_ip=""
+  local max_attempts=10
+  local attempt=0
+  
+  while [ $attempt -lt $max_attempts ]; do
+    project_container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" --format '{{range $k, $v := .NetworkSettings.Networks}}{{if eq $k "nginx-proxy-network"}}{{$v.IPAddress}}{{end}}{{end}}' 2>/dev/null || echo "")
+    if [[ -n "$project_container_ip" ]]; then
+      log "Project container IP: $project_container_ip"
+      break
+    fi
+    sleep 1
+    ((attempt++))
+  done
+  
+  if [[ -z "$project_container_ip" ]]; then
+    handle_error "Failed to get project container IP address after $max_attempts attempts"
+  fi
+
   # Create domain configuration for proxy
   log "Creating domain configuration for '${DOMAIN_NAME}'..."
   cat > "${domain_conf}" << EOF
@@ -1032,7 +1052,7 @@ server {
     
     # Proxy to project container
     location / {
-        proxy_pass http://${PROJECT_NAME}:80;
+        proxy_pass http://${project_container_ip}:80;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -1054,7 +1074,7 @@ server {
     
     # Health check endpoint
     location /health {
-        proxy_pass http://${PROJECT_NAME}:80/health;
+        proxy_pass http://${project_container_ip}:80/health;
         access_log off;
     }
     
@@ -1173,7 +1193,13 @@ function verify_deployment() {
   
   # Test internal network connectivity from proxy to project
   log "Testing proxy → project container connectivity..."
-  local proxy_to_project_response=$($CONTAINER_ENGINE exec nginx-proxy curl -s -o /dev/null -w "%{http_code}" "http://${container_name}:80/" 2>/dev/null || echo "000")
+  local project_ip=$($CONTAINER_ENGINE inspect "${container_name}" --format '{{range $k, $v := .NetworkSettings.Networks}}{{if eq $k "nginx-proxy-network"}}{{$v.IPAddress}}{{end}}{{end}}' 2>/dev/null || echo "")
+  local proxy_to_project_response=""
+  if [[ -n "$project_ip" ]]; then
+    proxy_to_project_response=$($CONTAINER_ENGINE exec nginx-proxy curl -s -o /dev/null -w "%{http_code}" "http://${project_ip}:80/" 2>/dev/null || echo "000")
+  else
+    proxy_to_project_response="000"
+  fi
   if [[ "$proxy_to_project_response" != "200" ]]; then
     log "WARNING: Proxy cannot reach project container (HTTP $proxy_to_project_response)"
   else
