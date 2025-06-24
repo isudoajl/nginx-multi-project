@@ -1,0 +1,86 @@
+---
+description: This rule governs critical production deployment practices and must be followed for all deployments. It ensures reliable container startup, proper environment configuration, and prevents common deployment failures. The rule is particularly important for maintaining production stability, proper proxy configuration, and preventing deployment-breaking issues like stale domain configs or missing environment variables. This rule helps maintain deployment reliability by documenting known failure modes and their solutions. 🚀
+globs:
+alwaysApply: true
+---
+# Production Deployment Critical Learnings
+
+## Critical Rules
+
+- ALWAYS clean up stale domain configuration files in `proxy/conf.d/domains/*.conf` before starting fresh production deployments
+- NEVER attempt production deployment with missing Cloudflare environment variables - verify `$CF_TOKEN`, `$CF_ACCOUNT`, and `$CF_ZONE` are set or deploy without Cloudflare first
+- ALWAYS check for nginx-proxy container crash-loops with `podman logs nginx-proxy` if deployment scripts hang at "Waiting for proxy to be ready..."
+- ALWAYS stop and remove crashed containers (`podman stop nginx-proxy && podman rm nginx-proxy`) before attempting fresh deployments
+- NEVER leave proxy configurations referencing non-existent upstream containers - this causes infinite restart loops with `[emerg] host not found in upstream` errors
+- ALWAYS use the Nix environment (`nix --extra-experimental-features "nix-command flakes" develop --command`) for production deployments while specifying `--env PRO` for target environment
+- ALWAYS verify container status with `podman ps` and `podman logs` before troubleshooting deployment script hangs
+- ALWAYS set up port forwarding for production environments using `sudo ./scripts/setup-port-forwarding.sh` to handle privileged ports 80/443
+- NEVER assume deployment scripts will complete if they hang for more than 2-3 minutes - investigate container logs immediately
+- **DNS Resolution Fix**: If nginx shows "host not found in upstream" errors, replace container hostnames with IP addresses in proxy_pass directives (e.g., `proxy_pass http://10.89.1.2:80;` instead of `proxy_pass http://container-name:80;`)
+- **Port Mapping**: Production proxy typically runs on ports 8080 (HTTP) and 8443 (HTTPS), not standard 80/443 - verify with `podman port container-name`
+- ALWAYS test container connectivity from proxy container using `podman exec nginx-proxy ping container-ip` and `podman exec nginx-proxy curl -I http://container-ip:80` before troubleshooting proxy configuration
+- **SCRIPT FIXED**: create-project.sh now automatically detects container IP addresses and uses them in proxy_pass directives instead of hostnames to prevent DNS resolution failures
+
+## Production Deployment Workflow
+
+1. **Pre-deployment Cleanup**:
+   ```bash
+   # Clean stale domain configs
+   rm -f proxy/conf.d/domains/*.conf
+   
+   # Stop and remove any crashed proxy containers
+   podman stop nginx-proxy && podman rm nginx-proxy
+   ```
+
+2. **Environment Verification**:
+   ```bash
+   # Check Cloudflare variables (optional)
+   echo "CF_TOKEN: ${CF_TOKEN:+SET}" 
+   echo "CF_ACCOUNT: ${CF_ACCOUNT:+SET}"
+   echo "CF_ZONE: ${CF_ZONE:+SET}"
+   ```
+
+3. **Production Deployment**:
+   ```bash
+   # Deploy without Cloudflare first (safer)
+   nix --extra-experimental-features "nix-command flakes" develop --command \
+   ./scripts/create-project.sh --name project --domain domain.com --port 9000 --env PRO
+   
+   # Then add Cloudflare if needed
+   ```
+
+4. **Post-deployment Verification**:
+   ```bash
+   # Check containers are running
+   podman ps | grep -E "(nginx-proxy|project-name)"
+   
+   # Check proxy logs for errors
+   podman logs nginx-proxy --tail 20
+   
+   # Set up port forwarding for production
+   sudo ./scripts/setup-port-forwarding.sh
+   ```
+
+## Common Failure Patterns
+
+- **Script hangs**: Usually due to nginx-proxy crash-loop from stale domain configs
+- **Container restart loops**: Check for `[emerg] host not found in upstream` in logs
+- **Missing environment variables**: Deploy without Cloudflare first, add later
+- **Port forwarding needed**: Production requires privileged port handling
+
+## Examples
+
+<example>
+  # Proper production deployment sequence
+  rm -f proxy/conf.d/domains/*.conf
+  podman stop nginx-proxy && podman rm nginx-proxy
+  nix --extra-experimental-features "nix-command flakes" develop --command \
+  ./scripts/create-project.sh --name mapa-kms --domain mapakms.com --port 9000 --env PRO
+  sudo ./scripts/setup-port-forwarding.sh
+</example>
+
+<example type="invalid">
+  # Deploying with stale configs - causes infinite loops
+  ./scripts/create-project.sh --name new-project --env PRO
+  # Hangs at "Waiting for proxy to be ready..." due to stale domain configs
+</example>
