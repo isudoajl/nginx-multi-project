@@ -561,17 +561,17 @@ sudo ./scripts/manage-proxy.sh --action start
 
 ## Other Common Issues
 
-### Cloudflare Error 521 (Web Server Is Down)
+### Connection Refused Errors
 
 **Symptoms:**
-- "Web server is down" error with Error code 521 when accessing site through Cloudflare
-- Site works locally but not through Cloudflare
+- "Connection refused" errors when accessing site
+- Site works locally but not externally
 
 **Causes:**
-1. Cloudflare cannot establish a connection to your origin server
-2. Your server's firewall is blocking Cloudflare IPs
-3. Your server is not listening on the expected ports (80/443)
-4. SSL/TLS configuration mismatch between Cloudflare and your server
+1. Server is not listening on the expected ports (80/443)
+2. Firewall is blocking connections
+3. Server is not accessible from the internet
+4. SSL/TLS configuration issues
 
 **Solutions:**
 1. Verify your server is accessible from the internet:
@@ -580,16 +580,15 @@ sudo ./scripts/manage-proxy.sh --action start
    curl -I http://YOUR_SERVER_IP
    ```
 
-2. Ensure your server accepts connections from Cloudflare IPs:
+2. Check firewall configuration:
    ```bash
-   # Check if Cloudflare IPs are allowed in your firewall
+   # Check firewall status
    sudo ufw status
    # or
    sudo firewall-cmd --list-all
    ```
 
-3. Verify SSL configuration matches Cloudflare expectations:
-   - If using "Full" or "Full (Strict)" SSL mode in Cloudflare, ensure your server has valid SSL certificates
+3. Verify SSL configuration:
    - Check certificate validity and expiration:
      ```bash
      nix --extra-experimental-features "nix-command flakes" develop --command \
@@ -610,14 +609,6 @@ sudo ./scripts/manage-proxy.sh --action start
      echo "OK" > projects/YOUR_PROJECT/html/health/index.html
      ```
    - Restart the container to apply changes
-
-6. Verify Cloudflare DNS settings:
-   - Ensure DNS records point to the correct IP address
-   - Check if the orange cloud (proxied) is enabled for your domain
-
-7. Test with Cloudflare development mode:
-   - Temporarily disable Cloudflare proxying (gray cloud) to test direct connection
-   - Enable development mode in Cloudflare dashboard to bypass cache
 
 # Troubleshooting Guide
 
@@ -871,24 +862,28 @@ This guide helps you diagnose and fix common issues with the Nginx Multi-Project
 
 ### Production Environment
 
-#### Cloudflare integration issues
+#### DNS resolution issues
 
-**Symptoms**: Domain not working with Cloudflare, or SSL issues.
+**Symptoms**: Domain not resolving properly, or connection issues.
 
 **Possible causes**:
-- Missing or incorrect Cloudflare API credentials
 - DNS not properly configured
+- Missing hosts file entries (development)
 - SSL certificate issues
 
 **Solutions**:
-1. Verify Cloudflare credentials:
+1. For development, check hosts file:
    ```bash
-   echo "CF_TOKEN: ${CF_TOKEN:+SET}"
-   echo "CF_ACCOUNT: ${CF_ACCOUNT:+SET}"
-   echo "CF_ZONE: ${CF_ZONE:+SET}"
+   grep <domain> /etc/hosts
    ```
 
-2. Deploy without Cloudflare first to test:
+2. For production, verify DNS records:
+   ```bash
+   nslookup <domain>
+   dig <domain>
+   ```
+
+3. Test deployment:
    ```bash
    ./scripts/create-project-modular.sh --name <project-name> --domain <domain> --port <port> --env PRO
    ```

@@ -144,7 +144,7 @@ function validate_docs() {
   
   if [ -f "$DOCS_DIR/script-api-reference.md" ]; then
     check_file_content "$DOCS_DIR/script-api-reference.md" "# Script API Reference" "Script API reference" || errors=$((errors + 1))
-    check_file_content "$DOCS_DIR/script-api-reference.md" "## create-project.sh" "Script API reference" || errors=$((errors + 1))
+    check_file_content "$DOCS_DIR/script-api-reference.md" "## create-project-modular.sh" "Script API reference" || errors=$((errors + 1))
     check_file_content "$DOCS_DIR/script-api-reference.md" "## update-hosts.sh" "Script API reference" || errors=$((errors + 1))
     check_file_content "$DOCS_DIR/script-api-reference.md" "## dev-environment.sh" "Script API reference" || errors=$((errors + 1))
     check_file_content "$DOCS_DIR/script-api-reference.md" "## generate-certs.sh" "Script API reference" || errors=$((errors + 1))

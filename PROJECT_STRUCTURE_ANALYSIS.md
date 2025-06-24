@@ -8,7 +8,7 @@ This document analyzes the current project structure against the documented arch
 ### ✅ **Well-Documented Components**
 - **Documentation Suite**: Comprehensive docs in `/docs/` directory
 - **Implementation Status**: Complete milestone tracking
-- **Scripts**: Advanced automation with `create-project.sh`
+- **Scripts**: Advanced automation with `create-project-modular.sh`
 - **Project Containers**: Multiple working examples in `/projects/`
 - **Proxy Configuration**: Functional proxy setup in `/proxy/`
 - **Specifications**: Detailed specs in `/specs/` directory
@@ -119,7 +119,7 @@ The project documentation and specs reference nginx configuration templates but 
 - `proxy-manage.sh` - Referenced but may not exist or be documented
 - `domain-manage.sh` - Referenced but may not exist or be documented
 
-**Current State**: `create-project.sh` is comprehensive, but utility scripts may be missing
+**Current State**: `create-project-modular.sh` is comprehensive, but utility scripts may be missing
 
 **Recommendation**: 
 - Verify if these scripts exist and document them

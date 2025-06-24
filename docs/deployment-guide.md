@@ -46,23 +46,20 @@ podman --version  # or docker --version
 
 **Development Environment (Local SSL + DNS)**
 ```bash
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
   --domain my-first-app.local \
   --env DEV
 ```
 
-**Production Environment (Cloudflare Integration)**
+**Production Environment**
 ```bash
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
   --domain my-first-app.com \
-  --env PRO \
-  --cf-token YOUR_CF_TOKEN \
-  --cf-account YOUR_CF_ACCOUNT \
-  --cf-zone YOUR_CF_ZONE
+  --env PRO
 ```
 
 ### What Happens During From-Scratch Deployment
@@ -104,7 +101,7 @@ The incremental deployment system intelligently detects your existing proxy and 
 
 ```bash
 # Add second project to existing ecosystem
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name second-app \
   --port 8091 \
   --domain second-app.local \
@@ -176,7 +173,7 @@ Deploy multiple projects efficiently:
 ```bash
 # Deploy multiple projects in sequence
 for project in app1 app2 app3; do
-  ./scripts/create-project.sh \
+  ./scripts/create-project-modular.sh \
     --name $project \
     --port $((8090 + $RANDOM % 100)) \
     --domain $project.local \
@@ -184,25 +181,22 @@ for project in app1 app2 app3; do
 done
 ```
 
-### Production Deployment with Cloudflare
+### Production Deployment
 
 ```bash
-# Production deployment with full Cloudflare integration
-./scripts/create-project.sh \
+# Production deployment
+./scripts/create-project-modular.sh \
   --name production-app \
   --port 8092 \
   --domain myapp.com \
-  --env PRO \
-  --cf-token $CLOUDFLARE_TOKEN \
-  --cf-account $CLOUDFLARE_ACCOUNT \
-  --cf-zone $CLOUDFLARE_ZONE
+  --env PRO
 ```
 
 ### Custom SSL Certificate Deployment
 
 ```bash
 # Deploy with custom SSL certificates
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name secure-app \
   --port 8093 \
   --domain secure-app.com \
@@ -283,7 +277,7 @@ podman exec nginx-proxy curl -I http://my-app:80  # Should return 200
    ss -tlnp | grep 8080
    
    # Use different port for project
-   ./scripts/create-project.sh --name my-app --port 8095 --domain my-app.local
+   ./scripts/create-project-modular.sh --name my-app --port 8095 --domain my-app.local
    ```
 
 4. **SSL Certificate Issues**
@@ -309,7 +303,7 @@ podman exec nginx-proxy curl -I http://my-app:80  # Should return 200
    podman restart nginx-proxy
    
    # Retry deployment
-   ./scripts/create-project.sh --name my-app --port 8090 --domain my-app.local
+   ./scripts/create-project-modular.sh --name my-app --port 8090 --domain my-app.local
    ```
 
 2. **Complete Infrastructure Reset**
@@ -324,7 +318,7 @@ podman exec nginx-proxy curl -I http://my-app:80  # Should return 200
    podman network rm nginx-proxy-network
    
    # Fresh deployment
-   ./scripts/create-project.sh --name my-app --port 8090 --domain my-app.local
+   ./scripts/create-project-modular.sh --name my-app --port 8090 --domain my-app.local
    ```
 
 ## Performance Optimization
@@ -348,8 +342,8 @@ podman exec nginx-proxy curl -I http://my-app:80  # Should return 200
 2. **Parallel Deployments**
    ```bash
    # Deploy multiple projects in parallel (with different ports)
-   ./scripts/create-project.sh --name app1 --port 8090 --domain app1.local &
-   ./scripts/create-project.sh --name app2 --port 8091 --domain app2.local &
+   ./scripts/create-project-modular.sh --name app1 --port 8090 --domain app1.local &
+   ./scripts/create-project-modular.sh --name app2 --port 8091 --domain app2.local &
    wait
    ```
 
@@ -370,7 +364,6 @@ podman exec nginx-proxy curl -I http://my-app:80  # Should return 200
 
 ### Production Security Checklist
 
-- [ ] Cloudflare integration configured
 - [ ] Valid SSL certificates installed
 - [ ] Security headers enabled
 - [ ] Firewall rules configured
@@ -427,7 +420,7 @@ podman port nginx-proxy
 ### Environment Management
 
 - **Development**: Use `.local` domains with self-signed certificates
-- **Production**: Use real domains with Cloudflare integration
+- **Production**: Use real domains with production-grade certificates
 - **Testing**: Use temporary project names and clean up after testing
 
 The Microservices Nginx Architecture deployment system provides enterprise-grade deployment capabilities with the simplicity of single-command execution, supporting both greenfield deployments and seamless integration with existing infrastructure! 🚀 

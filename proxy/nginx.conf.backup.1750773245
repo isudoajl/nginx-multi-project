@@ -94,21 +94,30 @@ http {
         return 301 https://$host$request_uri;
     }
 
-    # Default HTTPS server
+    # Default server block for HTTPS - return 444 for unknown domains
     server {
-        listen 443 ssl;
-        listen [::]:443 ssl;
-        http2 on;
+        listen 443 ssl http2 default_server;
+        listen [::]:443 ssl http2 default_server;
         server_name _;
-
-        # Fallback SSL certificate
-        ssl_certificate /etc/nginx/certs/fallback-cert.pem;
-        ssl_certificate_key /etc/nginx/certs/fallback-key.pem;
-
+        
         # Include SSL settings
         include /etc/nginx/conf.d/ssl-settings.conf;
+        
+        # Default SSL certificates (fallback)
+        ssl_certificate /etc/nginx/certs/test-debug.local/cert.pem;
+        ssl_certificate_key /etc/nginx/certs/test-debug.local/cert-key.pem;
+        
+        # Return 444 for bad bots and unusual methods
+        if ($bad_bot = 1) {
+            return 444;
+        }
 
-        # Return 444 for requests to unknown hosts
+        if ($method_allowed = 0) {
+            return 444;
+        }
+        
+        # Return error code 444 (Nginx special code that closes the connection)
+        # for unknown domains
         return 444;
     }
 

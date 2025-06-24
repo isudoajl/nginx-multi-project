@@ -125,7 +125,7 @@ The architecture is **production-ready** for the core use case of hosting multip
 **Problem Identified:** During the debugging process, hardcoded values were introduced that would prevent the solution from working generically for new projects.
 
 **Root Cause Analysis:**
-- **Container Naming Inconsistency:** `create-project.sh` generates containers named `${PROJECT_NAME}` but `update-proxy.sh` expected `${PROJECT_NAME}_container`
+- **Container Naming Inconsistency:** `create-project-modular.sh` generates containers named `${PROJECT_NAME}` but `update-proxy.sh` expected `${PROJECT_NAME}_container`
 - **Manual Debug Configs:** The `test-debug.local.conf` file was manually created with hardcoded references
 - **Missing Template Completeness:** HTTP redirect section was missing from the automated template
 
@@ -142,7 +142,7 @@ The architecture is **production-ready** for the core use case of hosting multip
 ## 📝 NEXT STEPS RECOMMENDATIONS
 
 ### **IMMEDIATE PRIORITY**
-1. **Test Generic Project Creation** - Validate that `create-project.sh` + `update-proxy.sh` workflow works end-to-end
+1. **Test Generic Project Creation** - Validate that `create-project-modular.sh` + `update-proxy.sh` workflow works end-to-end
 2. **Integration Testing** - Create a new test project to verify the fixed scripts work generically
 
 ### **SECONDARY OBJECTIVES**

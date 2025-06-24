@@ -31,14 +31,14 @@ echo "Creating test project for network testing..."
 TEST_PROJECT="test-network-project"
 TEST_DOMAIN="test-network.local"
 
-# Check if create-project.sh exists and is executable
-if [ ! -x "$PROJECT_ROOT/scripts/create-project.sh" ]; then
-    echo -e "${RED}Error: create-project.sh script not found or not executable${NC}"
+# Check if create-project-modular.sh exists and is executable
+if [ ! -x "$PROJECT_ROOT/scripts/create-project-modular.sh" ]; then
+    echo -e "${RED}Error: create-project-modular.sh script not found or not executable${NC}"
     exit 1
 fi
 
 # Create the test project
-"$PROJECT_ROOT/scripts/create-project.sh" "$TEST_PROJECT" "$TEST_DOMAIN" "dev" || {
+"$PROJECT_ROOT/scripts/create-project-modular.sh" "$TEST_PROJECT" "$TEST_DOMAIN" "dev" || {
     echo -e "${RED}Failed to create test project${NC}"
     exit 1
 }
@@ -116,7 +116,7 @@ TEST_PROJECT2="test-network-project2"
 TEST_DOMAIN2="test-network2.local"
 
 # Create the second test project
-"$PROJECT_ROOT/scripts/create-project.sh" "$TEST_PROJECT2" "$TEST_DOMAIN2" "dev" || {
+"$PROJECT_ROOT/scripts/create-project-modular.sh" "$TEST_PROJECT2" "$TEST_DOMAIN2" "dev" || {
     echo -e "${RED}Failed to create second test project${NC}"
     exit 1
 }

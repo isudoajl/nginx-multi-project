@@ -1,95 +1,67 @@
-# Production Port Forwarding Guide
+# Production Port Configuration
 
-This guide explains how to handle privileged ports (80/443) in production environments for the Nginx Multi-Project Architecture.
+In a production environment, it's a security best practice to run containers as non-root users. This means the Nginx proxy container cannot bind directly to privileged ports like 80 (HTTP) and 443 (HTTPS) by default.
 
-## Overview
+## Unprivileged Port Range Configuration (CURRENT APPROACH)
 
-In production environments like your domain `mapakms.com`, users need to access your services via standard HTTP/HTTPS ports (80/443). However, running containers on privileged ports requires root access, which is not recommended for security reasons.
+We now exclusively use the unprivileged ports approach, which modifies the range of unprivileged ports in the Linux kernel. This allows rootless containers to bind directly to ports 80 and 443 without any port forwarding.
 
-Our solution uses **port forwarding** to redirect traffic from privileged ports to non-privileged ports, allowing the Nginx proxy container to run safely as a non-root user.
+### Setup
 
-## Port Forwarding Architecture
-
-```
-Internet Users → mapakms.com:80/443 → Server → iptables Redirect → Nginx Proxy:8080/8443
-```
-
-With Cloudflare integration:
-
-```
-Internet Users → Cloudflare Edge → Server:80/443 → iptables Redirect → Nginx Proxy:8080/8443
-```
-
-## Setup Options
-
-### Option 1: Using the Dedicated Script (Recommended)
+We provide a script to automatically configure this:
 
 ```bash
-# Enter the Nix environment
-nix --extra-experimental-features "nix-command flakes" develop
-
-# Run the port forwarding script
-sudo ./scripts/setup-port-forwarding.sh
+# Run with sudo privileges
+sudo ./scripts/setup-unprivileged-ports.sh
 ```
 
-### Option 2: Using the Production Deployment Script
+This script:
+1. Sets the unprivileged port start to 80 (making ports 80 and above available to non-root users)
+2. Makes the change persistent by creating a sysctl configuration file
+3. Verifies the configuration was applied correctly
+
+### Manual Configuration
+
+If you prefer to configure this manually:
 
 ```bash
-# Enter the Nix environment
-nix --extra-experimental-features "nix-command flakes" develop
+# Set for current session
+echo 80 | sudo tee /proc/sys/net/ipv4/ip_unprivileged_port_start
 
-# Set up port forwarding
-sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
+# Make persistent
+echo "net.ipv4.ip_unprivileged_port_start = 80" | sudo tee /etc/sysctl.d/90-unprivileged_port_start.conf
+
+# Apply settings
+sudo sysctl -p /etc/sysctl.d/90-unprivileged_port_start.conf
 ```
 
-### Option 3: Manual Systemd Service Installation
+### Verification
+
+To verify the configuration:
 
 ```bash
-# Copy the service file
-sudo cp ./scripts/nginx-port-forward.service /etc/systemd/system/
-
-# Enable and start the service
-sudo systemctl daemon-reload
-sudo systemctl enable nginx-port-forward
-sudo systemctl start nginx-port-forward
+cat /proc/sys/net/ipv4/ip_unprivileged_port_start
+# Should output: 80
 ```
 
-## Verification
+## DNS Configuration
 
-To verify that port forwarding is working correctly:
-
-```bash
-# Check iptables rules
-sudo iptables -t nat -L PREROUTING
-
-# Test HTTP connection
-curl -I http://localhost
-# Should connect to port 8080
-
-# Test HTTPS connection
-curl -k -I https://localhost
-# Should connect to port 8443
-```
-
-## Cloudflare Integration
-
-When using Cloudflare with port forwarding:
+When setting up your domain:
 
 1. **DNS Configuration**: Point your domain (e.g., `mapakms.com`) to your server's IP address
-2. **Proxy Status**: Enable Cloudflare proxying (orange cloud)
-3. **SSL/TLS Mode**: Set to "Full (Strict)" for secure connections
-4. **Origin Server**: Your server with port forwarding configured
-5. **IP Restriction**: Only Cloudflare IPs can access your server directly
+2. **SSL/TLS**: Configure proper SSL certificates for secure connections
+3. **Origin Server**: Your server with direct port 80/443 binding
+4. **Firewall**: Configure appropriate firewall rules for security
 
 ## Troubleshooting
 
-### Port Forwarding Not Working
+### Direct Port Binding Not Working
 
-If port forwarding is not working:
+If direct port binding is not working:
 
-1. Check if iptables rules are active:
+1. Check if the unprivileged port start is configured correctly:
    ```bash
-   sudo iptables -t nat -L PREROUTING | grep REDIRECT
+   cat /proc/sys/net/ipv4/ip_unprivileged_port_start
    ```
 
 2. Verify that the Nginx proxy container is running:
@@ -97,43 +69,31 @@ If port forwarding is not working:
    podman ps | grep nginx-proxy
    ```
 
-3. Ensure ports 8080/8443 are not blocked by a firewall:
+3. Ensure ports 80/443 are not blocked by a firewall:
    ```bash
    sudo ufw status
    # or
    sudo firewall-cmd --list-all
    ```
 
-### Persistent Rules Not Loading After Reboot
-
-If port forwarding rules are not persisting after a reboot:
-
-1. Check if the systemd service is enabled:
+4. Check if another process is already using ports 80/443:
    ```bash
-   systemctl status nginx-port-forward
-   ```
-
-2. Try reinstalling the service:
-   ```bash
-   sudo ./scripts/setup-port-forwarding.sh
-   ```
-
-3. For systems without systemd, verify the network scripts:
-   ```bash
-   ls -la /etc/network/if-pre-up.d/iptables-restore
+   sudo ss -tulpn | grep -E ':80|:443'
    ```
 
 ## Security Considerations
 
-1. **Cloudflare IP Restriction**: Only allow traffic from Cloudflare's IP ranges
-2. **Real IP Headers**: Configure Nginx to use `CF-Connecting-IP` for client IP
-3. **Rate Limiting**: Implement rate limiting at both Cloudflare and Nginx levels
-4. **WAF Rules**: Use Cloudflare's Web Application Firewall for additional protection
+1. **IP Restriction**: Configure firewall rules to restrict access to authorized sources
+2. **Real IP Headers**: Configure Nginx to properly handle client IP forwarding
+3. **Rate Limiting**: Implement rate limiting at the Nginx level
+4. **SSL/TLS**: Use proper SSL certificates and secure cipher suites
 
-## Advanced Configuration
+## Legacy Approaches (DEPRECATED)
 
-For advanced port forwarding configurations, you can modify the scripts:
+The following approaches are no longer supported or recommended:
 
-- `scripts/setup-port-forwarding.sh`: Main port forwarding setup script
-- `scripts/nginx-port-forward.service`: Systemd service template
-- `nginx/scripts/prod/prod-deployment.sh`: Production deployment script with port forwarding option 
+- Port forwarding with `iptables` (removed)
+- Custom systemd services for port forwarding (removed)
+- Using privileged containers (security risk)
+
+These methods have been replaced by the more secure and simpler unprivileged ports approach. 

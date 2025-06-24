@@ -14,12 +14,11 @@ alwaysApply: true
 - NEVER leave proxy configurations referencing non-existent upstream containers - this causes infinite restart loops with `[emerg] host not found in upstream` errors
 - ALWAYS use the Nix environment (`nix --extra-experimental-features "nix-command flakes" develop --command`) for production deployments while specifying `--env PRO` for target environment
 - ALWAYS verify container status with `podman ps` and `podman logs` before troubleshooting deployment script hangs
-- ALWAYS set up port forwarding for production environments using `sudo ./scripts/setup-port-forwarding.sh` to handle privileged ports 80/443
 - NEVER assume deployment scripts will complete if they hang for more than 2-3 minutes - investigate container logs immediately
 - **DNS Resolution Fix**: If nginx shows "host not found in upstream" errors, replace container hostnames with IP addresses in proxy_pass directives (e.g., `proxy_pass http://10.89.1.2:80;` instead of `proxy_pass http://container-name:80;`)
-- **Port Mapping**: Production proxy typically runs on ports 8080 (HTTP) and 8443 (HTTPS), not standard 80/443 - verify with `podman port container-name`
+- **Port Mapping**: Production proxy typically runs on ports 8080 (HTTP) and 8443 (HTTPS), not standard 80/443. Port forwarding must be configured manually on the host.
 - ALWAYS test container connectivity from proxy container using `podman exec nginx-proxy ping container-ip` and `podman exec nginx-proxy curl -I http://container-ip:80` before troubleshooting proxy configuration
-- **SCRIPT FIXED**: create-project.sh now automatically detects container IP addresses and uses them in proxy_pass directives instead of hostnames to prevent DNS resolution failures
+- **SCRIPT FIXED**: create-project-modular.sh now automatically detects container IP addresses and uses them in proxy_pass directives instead of hostnames to prevent DNS resolution failures
 
 ## Production Deployment Workflow
 
@@ -44,7 +43,7 @@ alwaysApply: true
    ```bash
    # Deploy without Cloudflare first (safer)
    nix --extra-experimental-features "nix-command flakes" develop --command \
-   ./scripts/create-project.sh --name project --domain domain.com --port 9000 --env PRO
+   ./scripts/create-project-modular.sh --name project --domain domain.com --port 9000 --env PRO
    
    # Then add Cloudflare if needed
    ```
@@ -57,8 +56,8 @@ alwaysApply: true
    # Check proxy logs for errors
    podman logs nginx-proxy --tail 20
    
-   # Set up port forwarding for production
-   sudo ./scripts/setup-port-forwarding.sh
+   # Manually set up port forwarding for production if needed
+   # sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
    ```
 
 ## Common Failure Patterns
@@ -66,7 +65,7 @@ alwaysApply: true
 - **Script hangs**: Usually due to nginx-proxy crash-loop from stale domain configs
 - **Container restart loops**: Check for `[emerg] host not found in upstream` in logs
 - **Missing environment variables**: Deploy without Cloudflare first, add later
-- **Port forwarding needed**: Production requires privileged port handling
+- **Port forwarding not configured**: Production requires manual host configuration to forward privileged ports 80/443 to container ports 8080/8443.
 
 ## Examples
 
@@ -75,12 +74,12 @@ alwaysApply: true
   rm -f proxy/conf.d/domains/*.conf
   podman stop nginx-proxy && podman rm nginx-proxy
   nix --extra-experimental-features "nix-command flakes" develop --command \
-  ./scripts/create-project.sh --name mapa-kms --domain mapakms.com --port 9000 --env PRO
-  sudo ./scripts/setup-port-forwarding.sh
+  ./scripts/create-project-modular.sh --name mapa-kms --domain mapakms.com --port 9000 --env PRO
+  # Manually configure port forwarding on the host if needed
 </example>
 
 <example type="invalid">
   # Deploying with stale configs - causes infinite loops
-  ./scripts/create-project.sh --name new-project --env PRO
+  ./scripts/create-project-modular.sh --name new-project --env PRO
   # Hangs at "Waiting for proxy to be ready..." due to stale domain configs
 </example>

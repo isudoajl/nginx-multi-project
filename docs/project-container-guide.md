@@ -23,7 +23,7 @@ To create a new project container:
 nix develop
 
 # Create a new project
-./scripts/create-project.sh --name my-project --domain my-project.com --port 8080
+./scripts/create-project-modular.sh --name my-project --domain my-project.com --port 8080
 ```
 
 ## Project Container Architecture
@@ -40,7 +40,7 @@ Each project container consists of:
 ### Basic Usage
 
 ```bash
-./scripts/create-project.sh --name PROJECT_NAME --domain DOMAIN_NAME --port PORT
+./scripts/create-project-modular.sh --name PROJECT_NAME --domain DOMAIN_NAME --port PORT
 ```
 
 ### Required Parameters
@@ -64,10 +64,10 @@ Each project container consists of:
 
 ```bash
 # Create a basic development project
-./scripts/create-project.sh --name blog --domain blog.example.com --port 8080
+./scripts/create-project-modular.sh --name blog --domain blog.example.com --port 8080
 
 # Create a production project with custom frontend
-./scripts/create-project.sh --name shop --domain shop.example.com --port 8081 --env PRO --frontend /path/to/shop/dist
+./scripts/create-project-modular.sh --name shop --domain shop.example.com --port 8081 --env PRO --frontend /path/to/shop/dist
 ```
 
 ## Development Environment

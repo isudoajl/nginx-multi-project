@@ -47,7 +47,7 @@ alwaysApply: true
 - Validate input parameters and environment variables
 - Check script permissions and execution context
 - Verify template file generation
-- Check integration between create-project.sh and proxy updates
+- Check integration between create-project-modular.sh and proxy updates
 - Validate certificate generation and installation
 
 #### Environment Integration Issues
@@ -187,7 +187,7 @@ nix --extra-experimental-features "nix-command flakes" develop --command podman 
 nix --extra-experimental-features "nix-command flakes" develop --command podman exec <project-name> curl -I http://localhost
 
 # Script debugging
-nix --extra-experimental-features "nix-command flakes" develop --command bash -x ./scripts/create-project.sh --name test --domain test.local --env DEV
+nix --extra-experimental-features "nix-command flakes" develop --command bash -x ./scripts/create-project-modular.sh --name test --domain test.local --env DEV
 ```
 
 ### Log Analysis Patterns

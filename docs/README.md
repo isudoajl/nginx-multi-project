@@ -54,7 +54,7 @@ Sophisticated isolation with shared connectivity:
 | **Central Proxy** | ✅ Complete | 2023-08-17 | Multi-domain routing, SSL termination |
 | **Project Containers** | ✅ Complete | 2023-07-16 | Isolated microservices architecture |
 | **Development Environment** | ✅ Complete | 2024-06-30 | Local SSL, DNS, hot reload |
-| **Production Environment** | ✅ Complete | 2024-07-01 | Cloudflare integration, cert management |
+| **Production Environment** | ✅ Complete | 2024-07-01 | Production cert management |
 | **Incremental Deployment** | ✅ **NEW** | 2025-06-23 | Zero-downtime project addition |
 | **Self-Healing Scripts** | ✅ **Enhanced** | 2025-06-23 | Automatic infrastructure recovery |
 
@@ -79,10 +79,10 @@ echo $IN_NIX_SHELL  # Should return 1
 ### Create Your First Project
 ```bash
 # Development environment (local SSL + DNS)
-./scripts/create-project.sh --name my-app --port 8090 --domain my-app.local --env DEV
+./scripts/create-project-modular.sh --name my-app --port 8090 --domain my-app.local --env DEV
 
-# Production environment (with Cloudflare)
-./scripts/create-project.sh --name my-app --port 8090 --domain my-app.com --env PRO
+# Production environment
+./scripts/create-project-modular.sh --name my-app --port 8090 --domain my-app.com --env PRO
 ```
 
 ### Add Projects to Existing Infrastructure

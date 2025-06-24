@@ -178,19 +178,19 @@ resource "cloudflare_filter" "bad_bots" {
 
 ### Server Configuration for Cloudflare
 
-In production environments, the Nginx proxy container typically runs on non-privileged ports (8080/8443) while external users need to access the standard HTTP/HTTPS ports (80/443). This is handled through port forwarding.
+In production environments, the Nginx proxy container typically runs on non-privileged ports (8080/8443) while external users need to access the standard HTTP/HTTPS ports (80/443). This requires manual port forwarding on the host.
 
 #### Port Forwarding Configuration
 
-The system provides scripts to set up port forwarding from privileged ports to non-privileged ports:
+You need to manually configure `iptables` to redirect traffic from privileged ports to the non-privileged ports used by the container.
 
+Example:
 ```bash
-# Using the production deployment script
-sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
-
-# Or using the dedicated script
-sudo ./scripts/setup-port-forwarding.sh
+# Redirect incoming traffic from port 80 to 8080
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 ```
+
+Refer to the "Production Port Forwarding" documentation for more details.
 
 #### Complete Traffic Flow with Cloudflare
 
@@ -292,4 +292,19 @@ curl -I "https://{domain}/?id=1' OR 1=1"
    - Enable Polish (lossless or lossy)
    - Enable WebP conversion
 
-This specification provides a comprehensive guide for integrating Cloudflare with the Nginx microservices architecture. It ensures secure, efficient, and optimized delivery of content through Cloudflare's global network. 
+This specification provides a comprehensive guide for integrating Cloudflare with the Nginx microservices architecture. It ensures secure, efficient, and optimized delivery of content through Cloudflare's global network.
+
+## Step 4: Port Forwarding
+
+After a successful production deployment, you must handle port forwarding on the host to make the services accessible on standard ports. This involves manually setting up `iptables` rules to redirect traffic from ports 80/443 to the ports the proxy container is listening on (e.g., 8080/8443).
+
+Example:
+```bash
+# Redirect incoming traffic from port 80 to 8080
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+```
+
+Refer to the "Production Port Forwarding" documentation for more details.
+
+## Step 5: Final Verification
+# ... existing code ... 

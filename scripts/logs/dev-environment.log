@@ -132,3 +132,13 @@
 [2025-06-23 20:57:07] Created Docker Compose override file: /home/isudoajl/projects/nginx-multi-project-INTEGRATION/projects/second-app/docker-compose.override.yml
 [2025-06-23 20:57:07] Development environment setup completed for project: second-app
 [2025-06-23 20:57:07] Action 'setup' completed successfully for project: second-app
+[2025-06-24 13:35:46] Using container engine: podman
+[2025-06-24 13:35:46] Setting up development environment for project: test-deploy
+[2025-06-24 13:35:46] Created Docker Compose override file: /opt/nginx-multi-project/projects/test-deploy/docker-compose.override.yml
+[2025-06-24 13:35:46] Development environment setup completed for project: test-deploy
+[2025-06-24 13:35:46] Action 'setup' completed successfully for project: test-deploy
+[2025-06-24 13:38:14] Using container engine: podman
+[2025-06-24 13:38:14] Setting up development environment for project: test-deploy
+[2025-06-24 13:38:14] Created Docker Compose override file: /opt/nginx-multi-project/projects/test-deploy/docker-compose.override.yml
+[2025-06-24 13:38:14] Development environment setup completed for project: test-deploy
+[2025-06-24 13:38:14] Action 'setup' completed successfully for project: test-deploy

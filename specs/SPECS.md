@@ -124,7 +124,7 @@ project-root/
 │   │       ├── access.log
 │   │       └── error.log
 ├── scripts/                           # 🆕 Enhanced automation scripts
-│   ├── create-project.sh             # 🌟 Enhanced with incremental deployment
+│   ├── create-project-modular.sh             # 🌟 Enhanced with incremental deployment
 │   ├── update-proxy.sh               # Proxy configuration management
 │   ├── generate-certs.sh             # SSL certificate generation
 │   ├── manage-proxy.sh               # 🆕 Proxy lifecycle management
@@ -142,7 +142,7 @@ project-root/
 │   ├── troubleshooting-guide.md      # Troubleshooting guide
 │   └── production-port-forwarding.md # Production deployment guide
 └── tests/                            # 🆕 Comprehensive test suite
-    ├── test-create-project.sh        # Project creation testing
+    ├── test-create-project-modular.sh        # Project creation testing
     ├── test-proxy-container.sh       # Proxy functionality testing
     ├── integration/
     │   └── test-network-connectivity.sh # Network integration testing
@@ -153,7 +153,7 @@ project-root/
 
 ## Enhanced Script Capabilities
 
-### create-project.sh (Enhanced 2025-06-23)
+### create-project-modular.sh (Enhanced 2025-06-23)
 ```bash
 # Core Functions (Enhanced)
 check_proxy()                    # 🆕 Intelligent proxy state detection
