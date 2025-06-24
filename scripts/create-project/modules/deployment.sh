@@ -50,20 +50,79 @@ function deploy_project() {
   log "Connecting project container to proxy network..."
   $CONTAINER_ENGINE network connect "${proxy_network}" "${PROJECT_NAME}" || handle_error "Failed to connect project to proxy network"
   
+  # Wait for container to be fully ready
+  log "Waiting for project container to be ready..."
+  sleep 5
+  
   # Get project container IP address for proxy configuration from the proxy network
-  # Use a different approach since network names with hyphens cause template parsing issues
-  local container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" | grep -A 10 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
+  log "Detecting project container IP address on proxy network..."
+  local container_ip=""
+  local max_attempts=10
+  local attempt=0
+  
+  while [[ -z "${container_ip}" && $attempt -lt $max_attempts ]]; do
+    container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" | grep -A 20 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
+    if [[ -z "${container_ip}" ]]; then
+      log "Attempt $((attempt + 1)): Waiting for IP address assignment..."
+      sleep 2
+      ((attempt++))
+    fi
+  done
+  
   if [[ -z "${container_ip}" ]]; then
-    handle_error "Failed to get IP address for project container from proxy network"
+    handle_error "Failed to get IP address for project container from proxy network after ${max_attempts} attempts"
+  fi
+  
+  log "Project container IP address: ${container_ip}"
+  
+  # CRITICAL FIX: Copy domain-specific certificates to proxy certs directory
+  log "Copying domain-specific certificates to proxy..."
+  local proxy_certs_dir="${PROJECT_ROOT}/proxy/certs"
+  local domain_certs_source="${CERTS_DIR}/${DOMAIN_NAME}"
+  local domain_certs_dest="${proxy_certs_dir}/${DOMAIN_NAME}"
+  
+  # Ensure proxy certs directory exists
+  mkdir -p "${proxy_certs_dir}"
+  
+  # Copy domain-specific certificates to proxy
+  if [[ -d "${domain_certs_source}" ]]; then
+    mkdir -p "${domain_certs_dest}"
+    cp "${domain_certs_source}/cert.pem" "${domain_certs_dest}/cert.pem" || handle_error "Failed to copy cert.pem to proxy"
+    cp "${domain_certs_source}/cert-key.pem" "${domain_certs_dest}/cert-key.pem" || handle_error "Failed to copy cert-key.pem to proxy"
+    log "Domain-specific certificates copied to proxy successfully"
+  else
+    handle_error "Domain-specific certificate directory not found: ${domain_certs_source}"
+  fi
+  
+  # CRITICAL FIX: Verify network connectivity before updating proxy configuration
+  log "Verifying network connectivity between proxy and project container..."
+  local connectivity_verified=false
+  local max_connectivity_attempts=5
+  local connectivity_attempt=0
+  
+  while [[ "$connectivity_verified" == "false" && $connectivity_attempt -lt $max_connectivity_attempts ]]; do
+    if $CONTAINER_ENGINE exec nginx-proxy curl -s --max-time 5 -f "http://${container_ip}:80/health" > /dev/null 2>&1; then
+      connectivity_verified=true
+      log "Network connectivity verified successfully"
+    else
+      log "Connectivity attempt $((connectivity_attempt + 1)): Waiting for container to be reachable..."
+      sleep 3
+      ((connectivity_attempt++))
+    fi
+  done
+  
+  if [[ "$connectivity_verified" == "false" ]]; then
+    handle_error "Failed to verify network connectivity between proxy and project container after ${max_connectivity_attempts} attempts"
   fi
   
   # Generate domain configuration for proxy
   log "Generating domain configuration for proxy..."
   local proxy_domains_dir="${PROJECT_ROOT}/proxy/conf.d/domains"
   mkdir -p "${proxy_domains_dir}"
+  local domain_config_file="${proxy_domains_dir}/${DOMAIN_NAME}.conf"
   
   # Use container IP address instead of hostname to prevent DNS resolution issues
-  cat > "${proxy_domains_dir}/${DOMAIN_NAME}.conf" << EOF
+  cat > "${domain_config_file}" << EOF
 # Domain configuration for ${DOMAIN_NAME}
 server {
     listen 80;
@@ -98,9 +157,29 @@ server {
 }
 EOF
   
-  # Reload proxy configuration
-  log "Reloading proxy configuration..."
-  $CONTAINER_ENGINE exec nginx-proxy nginx -s reload || handle_error "Failed to reload proxy configuration"
+  # CRITICAL FIX: Safe proxy configuration reload with testing
+  log "Testing new proxy configuration..."
+  if ! $CONTAINER_ENGINE exec nginx-proxy nginx -t; then
+    log "ERROR: New proxy configuration is invalid. Rolling back..."
+    rm -f "${domain_config_file}"
+    handle_error "Proxy configuration test failed. Domain configuration removed to prevent breaking existing projects."
+  fi
   
-  log "Project '${PROJECT_NAME}' deployed successfully"
+  log "Proxy configuration test passed. Reloading proxy..."
+  if ! $CONTAINER_ENGINE exec nginx-proxy nginx -s reload; then
+    log "ERROR: Failed to reload proxy configuration. Rolling back..."
+    rm -f "${domain_config_file}"
+    handle_error "Failed to reload proxy configuration. Domain configuration removed to prevent breaking existing projects."
+  fi
+  
+  # Final verification that the new project is accessible
+  log "Performing final accessibility verification..."
+  sleep 2
+  if ! curl -s --max-time 10 -H "Host: ${DOMAIN_NAME}" "http://localhost:8080" | grep -q "301"; then
+    log "WARNING: Final accessibility test failed, but configuration is valid and loaded"
+  else
+    log "Final accessibility verification successful"
+  fi
+  
+  log "Project '${PROJECT_NAME}' deployed successfully with zero-downtime incremental deployment"
 } 
