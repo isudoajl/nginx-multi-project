@@ -97,40 +97,67 @@ function generate_nginx_conf() {
   
   log "Creating nginx.conf..."
   cat > "${project_dir}/nginx.conf" << EOF
-server {
-    listen 80;
-    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
     
-    # Include configuration files
-    include /etc/nginx/conf.d/*.conf;
+    # Log format
+    log_format main '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                    '\$status \$body_bytes_sent "\$http_referer" '
+                    '"\$http_user_agent" "\$http_x_forwarded_for"';
     
-    # Root directory
-    root /usr/share/nginx/html;
-    index index.html;
+    access_log /var/log/nginx/access.log main;
     
-    # Health check endpoint
-    location /health {
-        access_log off;
-        add_header Content-Type text/plain;
-        return 200 'OK';
-    }
+    # Basic settings
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
     
-    # Default location
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-    
-    # Error pages
-    error_page 404 /404.html;
-    location = /404.html {
+    server {
+        listen 80;
+        server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+        
+        # Include configuration files
+        include /etc/nginx/conf.d/*.conf;
+        
+        # Root directory
         root /usr/share/nginx/html;
-        internal;
-    }
-    
-    error_page 500 502 503 504 /50x.html;
-    location = /50x.html {
-        root /usr/share/nginx/html;
-        internal;
+        index index.html;
+        
+        # Health check endpoint
+        location /health {
+            access_log off;
+            add_header Content-Type text/plain;
+            return 200 'OK';
+        }
+        
+        # Default location
+        location / {
+            try_files \$uri \$uri/ =404;
+        }
+        
+        # Error pages
+        error_page 404 /404.html;
+        location = /404.html {
+            root /usr/share/nginx/html;
+            internal;
+        }
+        
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /usr/share/nginx/html;
+            internal;
+        }
     }
 }
 EOF
