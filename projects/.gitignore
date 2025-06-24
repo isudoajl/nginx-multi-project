@@ -1,0 +1,30 @@
+# Projects Directory - Runtime deployments not committed to repository
+# This directory contains deployed project instances that are generated dynamically
+
+# Ignore all project directories (they are created by deployment scripts)
+*/
+
+# Project-specific files to never commit
+**/certs/
+**/logs/
+**/*.log
+**/docker-compose.override.yml
+**/nginx.conf
+**/Dockerfile
+
+# Terraform state files
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate*
+**/terraform.tfvars
+
+# SSL certificates in projects
+**/*.pem
+**/*.key
+**/*.crt
+**/*.csr
+
+# Keep this directory but ignore all project contents
+*
+!.gitignore
+!README.md 

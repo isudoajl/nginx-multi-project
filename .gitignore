@@ -1,3 +1,184 @@
+# ========================================
+# 🚨 CRITICAL SECURITY PATTERNS 🚨
+# ========================================
+
+# SSL/TLS Certificates and Private Keys - NEVER COMMIT
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.cer
+*.cert
+*.ca-bundle
+cert-key.pem
+cert.pem
+privkey.pem
+fullchain.pem
+chain.pem
+ca-cert.pem
+ca-key.pem
+
+# OpenSSL configurations
+openssl.cnf
+*.cnf
+
+# Certificate directories
+certs/*/
+proxy/certs/*/
+**/certs/
+
+# ========================================
+# 🏗️ PROJECT DEPLOYMENT ARTIFACTS
+# ========================================
+
+# Deployed projects (runtime instances)
+projects/*/
+!projects/.gitignore
+!projects/README.md
+
+# Project-specific runtime files
+**/docker-compose.override.yml
+**/nginx.conf
+**/Dockerfile
+**/logs/
+**/*.log
+
+# ========================================
+# 📦 INFRASTRUCTURE & CONTAINERS
+# ========================================
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Podman
+.podman/
+
+# ========================================
+# 🌍 TERRAFORM & CLOUD
+# ========================================
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+terraform.tfvars
+
+# Cloudflare
+cloudflare-credentials.txt
+cf-token.txt
+
+# ========================================
+# 🔧 DEVELOPMENT & LOGS
+# ========================================
+
+# Logs
+*.log
+logs/
+**/*.log
+
+# Scripts logs
+scripts/logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ========================================
+# 🧪 TESTING & DEVELOPMENT
+# ========================================
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# ========================================
+# 📋 BACKUP & CLEANUP
+# ========================================
+
+# Backup files
+*.backup.*
+*.orig
+*.rej
+
+# Archive files
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Filter-branch backup (from git security cleanup)
+.git/refs/original/
+
+# ========================================
+# 🎯 PRODUCTION ARTIFACTS
+# ========================================
+
+# Production configurations
+production.conf
+prod.conf
+*.prod
+*.production
+
+# Database dumps
+*.sql
+*.db
+*.sqlite
+
+# ========================================
+# 🔐 SECRETS & CREDENTIALS
+# ========================================
+
+# Any secret files
+*secret*
+*credential*
+*password*
+*token*
+*api-key*
+*private-key*
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# GPG keys
+*.gpg
+*.asc
+
 # SSL Certificates - NEVER commit these!
 *.pem
 *.key
