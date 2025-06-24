@@ -19,6 +19,7 @@ alwaysApply: true
 - **Port Mapping**: Production proxy typically runs on ports 8080 (HTTP) and 8443 (HTTPS), not standard 80/443. Port forwarding must be configured manually on the host.
 - ALWAYS test container connectivity from proxy container using `podman exec nginx-proxy ping container-ip` and `podman exec nginx-proxy curl -I http://container-ip:80` before troubleshooting proxy configuration
 - **SCRIPT FIXED**: create-project-modular.sh now automatically detects container IP addresses and uses them in proxy_pass directives instead of hostnames to prevent DNS resolution failures
+- **CRITICAL**: Incremental deployments MUST NOT cause downtime to existing projects - this is the core architectural requirement
 
 ## CRITICAL BUG FIXES IMPLEMENTED (December 2024)
 
@@ -46,6 +47,21 @@ alwaysApply: true
 - **Root Cause**: Missing .gitignore patterns for certificate files
 - **Fix**: Added comprehensive .gitignore for *.pem, *.key, *.crt, certs/ directories
 
+### 5. Critical Incremental Deployment Failures (REQUIRES IMMEDIATE FIX)
+- **Problem**: Incremental deployments cause downtime to existing projects
+- **Symptoms**: 
+  - SSL handshake failures on existing projects during new project deployment
+  - Certificate mounting failures (script copies to wrong directory)
+  - Proxy configuration reload failures bringing down all projects
+  - Network connectivity issues after container rebuilds
+- **Root Causes**:
+  - Script fails to copy domain-specific certificates to proxy/certs/ directory (only copies to root certs/)
+  - Inconsistent certificate paths between project containers and proxy container
+  - IP address detection fails after container rebuilds, creating invalid proxy_pass directives
+  - No verification of network connectivity before updating proxy configuration
+  - Proxy reload can fail and bring down existing projects
+- **Required Fix**: Script must handle incremental deployments with zero downtime guarantee
+
 ## Production Deployment Workflow
 
 1. **Pre-deployment Cleanup**:
@@ -57,12 +73,11 @@ alwaysApply: true
    podman stop nginx-proxy && podman rm nginx-proxy
    ```
 
-2. **Environment Verification**:
+2. **Production Deployment**:
    ```bash
-   # Check Cloudflare variables (optional)
-   echo "CF_TOKEN: ${CF_TOKEN:+SET}" 
-   echo "CF_ACCOUNT: ${CF_ACCOUNT:+SET}"
-   echo "CF_ZONE: ${CF_ZONE:+SET}"
+   # Deploy without Cloudflare first (safer)
+   nix --extra-experimental-features "nix-command flakes" develop --command \
+   ./scripts/create-project-modular.sh --name project --domain domain.com --port 9000 --env PRO
    ```
 
 3. **Production Deployment**:

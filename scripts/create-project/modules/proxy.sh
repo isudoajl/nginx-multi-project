@@ -10,9 +10,19 @@ function check_proxy() {
   local proxy_dir="${PROJECT_ROOT}/proxy"
   local proxy_network="nginx-proxy-network"
   
-  # Clean up stale domain configurations for fresh deployments
-  log "Cleaning up stale domain configurations..."
-  rm -f "${proxy_dir}/conf.d/domains"/*.conf || log "No stale domain configs to clean"
+  # CRITICAL FIX: Only clean up stale domain configs for FRESH deployments (when no proxy exists)
+  # DO NOT remove existing domain configs during incremental deployments
+  local proxy_exists=false
+  if $CONTAINER_ENGINE ps -a --format "{{.Names}}" | grep -q "^${proxy_container}$"; then
+    proxy_exists=true
+  fi
+  
+  if [[ "$proxy_exists" == "false" ]]; then
+    log "Fresh deployment detected - cleaning up any stale domain configurations..."
+    rm -f "${proxy_dir}/conf.d/domains"/*.conf || log "No stale domain configs to clean"
+  else
+    log "Existing proxy detected - preserving existing domain configurations for incremental deployment"
+  fi
   
   # Check if proxy container exists and is running
   if $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${proxy_container}$"; then

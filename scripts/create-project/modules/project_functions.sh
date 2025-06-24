@@ -1,49 +1,6 @@
 #!/bin/bash
 
-# Function: Generate nginx.conf
-function generate_nginx_conf() {
-  local project_dir="$1"
-  
-  log "Creating nginx.conf..."
-  cat > "${project_dir}/nginx.conf" << EOC
-server {
-    listen 80;
-    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
-    
-    # Include configuration files
-    include /etc/nginx/conf.d/*.conf;
-    
-    # Root directory
-    root /usr/share/nginx/html;
-    index index.html;
-    
-    # Health check endpoint
-    location /health {
-        access_log off;
-        add_header Content-Type text/plain;
-        return 200 'OK';
-    }
-    
-    # Default location
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-    
-    # Error pages
-    error_page 404 /404.html;
-    location = /404.html {
-        root /usr/share/nginx/html;
-        internal;
-    }
-    
-    error_page 500 502 503 504 /50x.html;
-    location = /50x.html {
-        root /usr/share/nginx/html;
-        internal;
-    }
-}
-EOC
-}
+# REMOVED: Duplicate generate_nginx_conf function that was overwriting the correct one from project_files.sh
 
 # Function: Generate configuration files
 function generate_config_files() {
