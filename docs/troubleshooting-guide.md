@@ -14,6 +14,7 @@ This guide provides solutions for common issues encountered when working with pr
 8. [Nginx Configuration Issues](#nginx-configuration-issues)
 9. [Handling Privileged Ports (80/443) for Nginx Proxy](#handling-privileged-ports-80443-for-nginx-proxy)
 10. [Managing the Nginx Proxy](#managing-the-nginx-proxy)
+11. [Script Architecture Issues](#script-architecture-issues)
 
 ---
 
@@ -29,7 +30,7 @@ This guide provides solutions for common issues encountered when working with pr
 **Solutions:**
 1. Enter the Nix environment:
    ```bash
-   nix develop
+   nix --extra-experimental-features "nix-command flakes" develop
    ```
 2. Check if the environment is active:
    ```bash
@@ -515,6 +516,28 @@ curl -k -I https://localhost
 # Should show a connection to port 8443
 ```
 
+If you can access the service on port 8080/8443 but not on 80/443, it's likely a port forwarding issue.
+
+- **Check iptables Rules**: Ensure that the manual port forwarding rules are correctly set up. For external traffic, you should have `PREROUTING` rules:
+  ```bash
+  sudo iptables -t nat -L PREROUTING
+  ```
+  For local traffic, you might need `OUTPUT` rules:
+  ```bash
+  sudo iptables -t nat -L OUTPUT
+  ```
+- **Apply Port Forwarding**: If the rules are missing, you need to apply them manually. For example:
+  ```bash
+  # For external traffic
+  sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+  
+  # For local traffic
+  sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 80 -j REDIRECT --to-port 8080
+  ```
+- **Firewall Issues**: Check if a firewall (like `ufw` or `firewalld`) is blocking the ports.
+
+#### 5.3.4. DNS Resolution Issues
+
 ## Managing the Nginx Proxy
 
 Use the `manage-proxy.sh` script to control the Nginx proxy container:
@@ -538,4 +561,476 @@ sudo ./scripts/manage-proxy.sh --action start
 
 ## Other Common Issues
 
-// ... existing code ... 
+### Cloudflare Error 521 (Web Server Is Down)
+
+**Symptoms:**
+- "Web server is down" error with Error code 521 when accessing site through Cloudflare
+- Site works locally but not through Cloudflare
+
+**Causes:**
+1. Cloudflare cannot establish a connection to your origin server
+2. Your server's firewall is blocking Cloudflare IPs
+3. Your server is not listening on the expected ports (80/443)
+4. SSL/TLS configuration mismatch between Cloudflare and your server
+
+**Solutions:**
+1. Verify your server is accessible from the internet:
+   ```bash
+   # Check if your ports are open and accessible
+   curl -I http://YOUR_SERVER_IP
+   ```
+
+2. Ensure your server accepts connections from Cloudflare IPs:
+   ```bash
+   # Check if Cloudflare IPs are allowed in your firewall
+   sudo ufw status
+   # or
+   sudo firewall-cmd --list-all
+   ```
+
+3. Verify SSL configuration matches Cloudflare expectations:
+   - If using "Full" or "Full (Strict)" SSL mode in Cloudflare, ensure your server has valid SSL certificates
+   - Check certificate validity and expiration:
+     ```bash
+     nix --extra-experimental-features "nix-command flakes" develop --command \
+     podman exec nginx-proxy openssl x509 -in /etc/nginx/certs/mapakms.com/cert.pem -text -noout
+     ```
+
+4. Test internal container connectivity:
+   ```bash
+   # Test if proxy can reach the project container
+   nix --extra-experimental-features "nix-command flakes" develop --command \
+   podman exec nginx-proxy curl -I http://PROJECT_CONTAINER_IP:80
+   ```
+
+5. Check for missing health endpoint:
+   - Create a health endpoint in your project container:
+     ```bash
+     mkdir -p projects/YOUR_PROJECT/html/health
+     echo "OK" > projects/YOUR_PROJECT/html/health/index.html
+     ```
+   - Restart the container to apply changes
+
+6. Verify Cloudflare DNS settings:
+   - Ensure DNS records point to the correct IP address
+   - Check if the orange cloud (proxied) is enabled for your domain
+
+7. Test with Cloudflare development mode:
+   - Temporarily disable Cloudflare proxying (gray cloud) to test direct connection
+   - Enable development mode in Cloudflare dashboard to bypass cache
+
+# Troubleshooting Guide
+
+This guide helps you diagnose and fix common issues with the Nginx Multi-Project Architecture.
+
+## General Troubleshooting Steps
+
+1. **Check container status**:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman ps -a
+   ```
+
+2. **View container logs**:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy
+   nix --extra-experimental-features "nix-command flakes" develop --command podman logs <project-name>
+   ```
+
+3. **Test Nginx configuration**:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t
+   nix --extra-experimental-features "nix-command flakes" develop --command podman exec <project-name> nginx -t
+   ```
+
+4. **Check network connectivity**:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman network ls
+   nix --extra-experimental-features "nix-command flakes" develop --command podman network inspect nginx-proxy-network
+   ```
+
+## Common Issues and Solutions
+
+### Proxy Container Issues
+
+#### Proxy container fails to start
+
+**Symptoms**: The nginx-proxy container stops immediately after starting.
+
+**Possible causes**:
+- Invalid Nginx configuration
+- Port conflicts (80/443 already in use)
+- Missing or invalid certificates
+- Domain configuration references non-existent containers
+
+**Solutions**:
+1. Check proxy logs:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy
+   ```
+
+2. Clean up stale domain configurations:
+   ```bash
+   rm -f proxy/conf.d/domains/*.conf
+   ```
+
+3. Verify port availability:
+   ```bash
+   ss -tlnp | grep -E ":(80|443)"
+   ```
+
+4. Restart the proxy:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command ./scripts/manage-proxy.sh -a restart
+   ```
+
+#### "host not found in upstream" error
+
+**Symptoms**: Proxy logs show "[emerg] host not found in upstream" errors.
+
+**Possible causes**:
+- Domain configuration references a container that doesn't exist
+- Container exists but is not connected to the proxy network
+- DNS resolution issues between containers
+
+**Solutions**:
+1. Remove domain configurations for non-existent containers:
+   ```bash
+   rm -f proxy/conf.d/domains/<non-existent-domain>.conf
+   ```
+
+2. Ensure the project container is running:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman ps | grep <project-name>
+   ```
+
+3. Connect the container to the proxy network:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman network connect nginx-proxy-network <project-name>
+   ```
+
+4. Use IP addresses instead of hostnames in proxy_pass directives:
+   - Get container IP:
+     ```bash
+     nix --extra-experimental-features "nix-command flakes" develop --command podman inspect <project-name> --format '{{.NetworkSettings.Networks.nginx-proxy-network.IPAddress}}'
+     ```
+   - Update the domain configuration with the IP address
+
+### Project Container Issues
+
+#### Project container fails to start
+
+**Symptoms**: The project container stops immediately after starting.
+
+**Possible causes**:
+- Invalid Nginx configuration
+- Port conflicts
+- Permission issues with mounted volumes
+
+**Solutions**:
+1. Check project logs:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman logs <project-name>
+   ```
+
+2. Test Nginx configuration:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman exec <project-name> nginx -t
+   ```
+
+3. Check for port conflicts:
+   ```bash
+   ss -tlnp | grep <port>
+   ```
+
+#### Cannot access project through proxy
+
+**Symptoms**: Project container is running, but you get 502 Bad Gateway when accessing through the proxy.
+
+**Possible causes**:
+- Network connectivity issues between proxy and project
+- Project container not listening on expected port
+- Incorrect proxy configuration
+
+**Solutions**:
+1. Test direct connectivity:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy curl -I http://<project-name>
+   ```
+
+2. Verify project container IP:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman inspect <project-name> --format '{{range $k, $v := .NetworkSettings.Networks}}{{with $v}}{{.IPAddress}}{{end}}{{end}}'
+   ```
+
+3. Check if both containers are on the same network:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman network inspect nginx-proxy-network
+   ```
+
+### Script Issues
+
+#### create-project-modular.sh script hangs
+
+**Symptoms**: The script appears to hang at "Waiting for proxy to be ready..."
+
+**Possible causes**:
+- Proxy container is crash-looping
+- Invalid domain configuration
+- Network connectivity issues
+
+**Solutions**:
+1. Check proxy container status in another terminal:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman ps -a | grep nginx-proxy
+   nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy
+   ```
+
+2. Clean up and restart:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command podman stop nginx-proxy
+   nix --extra-experimental-features "nix-command flakes" develop --command podman rm nginx-proxy
+   rm -f proxy/conf.d/domains/*.conf
+   ```
+
+#### Issues with the modular script structure
+
+**Symptoms**: The `create-project-modular.sh` script fails with errors related to missing functions or modules.
+
+**Possible causes**:
+- Missing module files
+- Incorrect paths to module files
+- Permission issues with module files
+
+**Solutions**:
+1. Check if all module files exist:
+   ```bash
+   ls -la scripts/create-project/modules/
+   ```
+
+2. Ensure all module files have execute permissions:
+   ```bash
+   chmod +x scripts/create-project/main.sh
+   chmod +x scripts/create-project/modules/*.sh
+   ```
+
+3. Verify the symlink for create-project-modular.sh:
+   ```bash
+   ls -la scripts/create-project-modular.sh
+   ```
+
+4. If issues persist, use the original script as a fallback:
+   ```bash
+   ./scripts/create-project-modular.sh --name <project-name> --domain <domain> --port <port>
+   ```
+
+### SSL Certificate Issues
+
+#### SSL certificate errors
+
+**Symptoms**: Browser shows SSL certificate warnings or errors.
+
+**Possible causes**:
+- Self-signed certificates in development environment
+- Certificate mismatch with domain name
+- Expired certificates
+
+**Solutions**:
+1. For development, add security exception in browser
+2. Regenerate certificates with correct domain name:
+   ```bash
+   ./scripts/generate-certs.sh --domain <domain> --output ./projects/<project-name>/certs
+   ```
+3. Update proxy with new certificates:
+   ```bash
+   ./scripts/update-proxy.sh --action update --name <project-name> --domain <domain> --ssl
+   ```
+
+## Environment-Specific Issues
+
+### Development Environment
+
+#### Cannot access project by domain name
+
+**Symptoms**: Cannot access the project using the domain name in browser.
+
+**Possible causes**:
+- Missing hosts file entry
+- Proxy not running
+- Project container not running
+
+**Solutions**:
+1. Update hosts file:
+   ```bash
+   sudo ./scripts/update-hosts.sh --domain <domain> --action add
+   ```
+
+2. Verify hosts file entry:
+   ```bash
+   grep <domain> /etc/hosts
+   ```
+
+### Production Environment
+
+#### Cloudflare integration issues
+
+**Symptoms**: Domain not working with Cloudflare, or SSL issues.
+
+**Possible causes**:
+- Missing or incorrect Cloudflare API credentials
+- DNS not properly configured
+- SSL certificate issues
+
+**Solutions**:
+1. Verify Cloudflare credentials:
+   ```bash
+   echo "CF_TOKEN: ${CF_TOKEN:+SET}"
+   echo "CF_ACCOUNT: ${CF_ACCOUNT:+SET}"
+   echo "CF_ZONE: ${CF_ZONE:+SET}"
+   ```
+
+2. Deploy without Cloudflare first to test:
+   ```bash
+   ./scripts/create-project-modular.sh --name <project-name> --domain <domain> --port <port> --env PRO
+   ```
+
+## Debugging Tips
+
+### For the original monolithic script
+
+1. Enable debug mode for more verbose output:
+   ```bash
+   DEBUG=1 ./scripts/create-project-modular.sh --name <project-name> --domain <domain> --port <port>
+   ```
+
+2. Check the log files:
+   ```bash
+   cat ./scripts/logs/create-project.log
+   ```
+
+### For the modular script structure
+
+1. Enable debug mode for more verbose output:
+   ```bash
+   DEBUG=1 ./scripts/create-project-modular.sh --name <project-name> --domain <domain> --port <port>
+   ```
+
+2. Check the log files:
+   ```bash
+   cat ./scripts/logs/create-project.log
+   ```
+
+3. Debug individual modules:
+   ```bash
+   DEBUG=1 bash -x ./scripts/create-project/modules/proxy.sh
+   ```
+
+4. If you encounter issues with the modular script, you can always fall back to using the original script while troubleshooting.
+
+## Advanced Troubleshooting
+
+### Inspecting container networking
+
+```bash
+nix --extra-experimental-features "nix-command flakes" develop --command podman network inspect nginx-proxy-network
+```
+
+### Testing internal container connectivity
+
+```bash
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy curl -I http://<project-container-ip>
+```
+
+### Checking for stale configurations
+
+```bash
+find ./proxy/conf.d/domains -type f -name "*.conf" | xargs grep -l "upstream.*<non-existent-container>"
+```
+
+## Script Architecture Issues
+
+### Module Not Found Errors
+
+**Symptoms:**
+- "No such file or directory" errors when running scripts
+- "source: cannot read" errors
+- Script fails immediately after starting
+
+**Solutions:**
+1. Verify the module path in the main script:
+   ```bash
+   grep MODULES_DIR scripts/create-project-modular.sh
+   ```
+   Should point to `scripts/create-project/modules`
+
+2. Check if all required modules exist:
+   ```bash
+   ls -la scripts/create-project/modules/
+   ```
+   Should include: common.sh, args.sh, environment.sh, proxy.sh, project_structure.sh, project_files.sh, deployment.sh, verification.sh
+
+3. If any modules are missing, they need to be created based on the script's requirements.
+
+### Missing Functions
+
+**Symptoms:**
+- "function not found" errors
+- Script fails during execution with reference to undefined function
+
+**Solutions:**
+1. Check if the function is defined in the appropriate module:
+   ```bash
+   grep -r "function function_name" scripts/
+   ```
+
+2. Ensure all required modules are sourced in the main script:
+   ```bash
+   grep "source" scripts/create-project-modular.sh
+   ```
+
+3. Add the missing function to the appropriate module or create a new module if needed.
+
+### Incorrect Project Root Path
+
+**Symptoms:**
+- Files created in unexpected locations
+- "No such file or directory" errors when accessing project files
+- Relative path issues
+
+**Solutions:**
+1. Check the PROJECT_ROOT definition in the script:
+   ```bash
+   grep PROJECT_ROOT scripts/create-project-modular.sh
+   ```
+   Should be set to the correct root directory of the project
+
+2. Verify the directory structure matches what the script expects:
+   ```bash
+   ls -la $(dirname $(readlink -f scripts/create-project-modular.sh))/..
+   ```
+
+3. Update the PROJECT_ROOT path in the script if necessary.
+
+### Log File Access Issues
+
+**Symptoms:**
+- "Permission denied" when writing to log files
+- Missing log entries
+- Script fails with log-related errors
+
+**Solutions:**
+1. Check log directory permissions:
+   ```bash
+   ls -la scripts/logs/
+   ```
+
+2. Create the logs directory if it doesn't exist:
+   ```bash
+   mkdir -p scripts/logs/
+   ```
+
+3. Ensure the current user has write permissions:
+   ```bash
+   chmod 755 scripts/logs/
+   touch scripts/logs/create-project.log
+   chmod 644 scripts/logs/create-project.log
+   ``` 
