@@ -20,6 +20,32 @@ alwaysApply: true
 - ALWAYS test container connectivity from proxy container using `podman exec nginx-proxy ping container-ip` and `podman exec nginx-proxy curl -I http://container-ip:80` before troubleshooting proxy configuration
 - **SCRIPT FIXED**: create-project-modular.sh now automatically detects container IP addresses and uses them in proxy_pass directives instead of hostnames to prevent DNS resolution failures
 
+## CRITICAL BUG FIXES IMPLEMENTED (December 2024)
+
+### 1. IP Address Detection Bug (FIXED)
+- **Problem**: Script was concatenating ALL network IP addresses instead of getting specific proxy network IP
+- **Symptom**: Malformed IPs like `10.89.6.2010.89.1.106` in proxy_pass directives
+- **Root Cause**: `podman inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'` returns all IPs concatenated
+- **Fix**: Use grep-based extraction: `podman inspect container | grep -A 10 "nginx-proxy-network" | grep IPAddress`
+
+### 2. Network Name Template Parsing Bug (FIXED)
+- **Problem**: Podman inspect template parsing fails with network names containing hyphens
+- **Symptom**: `template: inspect:1: bad character U+002D '-'` errors with `nginx-proxy-network`
+- **Root Cause**: Go template parser cannot handle network names with hyphens in template syntax
+- **Fix**: Replaced template-based approach with grep-based IP extraction
+
+### 3. Nginx Configuration Structure Bug (FIXED)
+- **Problem**: Generated project nginx.conf missing `http` directive wrapper
+- **Symptom**: `nginx: [emerg] "server" directive is not allowed here in /etc/nginx/nginx.conf:1`
+- **Root Cause**: Configuration generated only server block without required http context
+- **Fix**: Added proper nginx.conf structure with user, events, and http directives
+
+### 4. SSL Certificate Security Vulnerability (FIXED)
+- **Problem**: SSL certificates and private keys were being committed to git repository
+- **Symptom**: Sensitive cryptographic material exposed in version control
+- **Root Cause**: Missing .gitignore patterns for certificate files
+- **Fix**: Added comprehensive .gitignore for *.pem, *.key, *.crt, certs/ directories
+
 ## Production Deployment Workflow
 
 1. **Pre-deployment Cleanup**:

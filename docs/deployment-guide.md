@@ -251,6 +251,33 @@ podman exec nginx-proxy curl -I http://my-app:80  # Should return 200
 
 ## Troubleshooting Deployment Issues
 
+### CRITICAL BUG FIXES RESOLVED (December 2024)
+
+**These issues have been fixed in the current version - documented for reference:**
+
+#### 1. IP Address Detection Malformation ✅ FIXED
+- **Problem**: Script concatenated ALL container IP addresses instead of getting specific proxy network IP
+- **Symptom**: Malformed IPs like `10.89.6.2010.89.1.106` in proxy_pass directives
+- **Root Cause**: `podman inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'` concatenates all IPs
+- **Solution**: Implemented grep-based extraction: `podman inspect container | grep -A 10 "nginx-proxy-network" | grep IPAddress`
+
+#### 2. Network Template Parsing with Hyphens ✅ FIXED  
+- **Problem**: Podman inspect template parsing failed with network names containing hyphens
+- **Symptom**: `template: inspect:1: bad character U+002D '-'` errors with `nginx-proxy-network`
+- **Root Cause**: Go template parser cannot handle hyphens in network names
+- **Solution**: Replaced template-based approach with grep-based IP extraction
+
+#### 3. Missing HTTP Directive Wrapper ✅ FIXED
+- **Problem**: Generated project nginx.conf files missing required `http` directive wrapper  
+- **Symptom**: `nginx: [emerg] "server" directive is not allowed here in /etc/nginx/nginx.conf:1`
+- **Root Cause**: Configuration generated only server blocks without required http context
+- **Solution**: Added proper nginx.conf structure with user, events, and http directives
+
+#### 4. SSL Certificate Security Vulnerability ✅ FIXED
+- **Problem**: SSL certificates and private keys being committed to git repository
+- **Risk**: Exposure of sensitive cryptographic material in version control
+- **Solution**: Added comprehensive .gitignore patterns and removed certificates from git history
+
 ### Common Deployment Problems
 
 1. **Proxy Detection Failures**
