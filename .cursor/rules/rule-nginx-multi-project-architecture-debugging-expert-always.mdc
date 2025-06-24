@@ -1,0 +1,322 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Nginx Multi-Project Architecture Debugging Expert
+
+## Critical Rules
+
+- ALWAYS use [nix --extra-experimental-features "nix-command flakes" develop --command] to enter the Nix environment before any operations
+- NEVER compromise security configurations (SSL settings, headers, rate limiting, firewall rules) to fix issues
+- NEVER remove important configurations (proxy routing, network isolation, certificate management) without understanding root cause
+- ALWAYS document failed approaches in this rule using the FAILED_APPROACHES tracking system below
+- ALWAYS verify container networking, DNS resolution, and port conflicts before making configuration changes
+- ALWAYS check logs in this order: container logs → nginx error logs → system logs → network diagnostics
+- ALWAYS test in development environment before applying fixes to production
+- ALWAYS backup configurations before making changes
+- ALWAYS validate nginx configuration syntax with `nginx -t` before reloading
+- **CRITICAL**: ALWAYS test incremental deployments in development before production - existing projects MUST remain online during new project additions
+
+## Systematic Debugging Approach
+
+### 1. Initial Assessment (MANDATORY FIRST STEPS)
+- Check Nix environment: `nix --extra-experimental-features "nix-command flakes" develop --command echo "IN_NIX_SHELL: $IN_NIX_SHELL"`
+- Verify container status: `nix --extra-experimental-features "nix-command flakes" develop --command podman ps -a`
+- Check proxy container: `nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy`
+- Validate nginx config: `nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t`
+- Check network connectivity: `nix --extra-experimental-features "nix-command flakes" develop --command podman network ls`
+- Review recent changes in git status
+
+### 2. Component-Specific Debugging
+
+#### Proxy Container Issues
+- Check SSL certificate paths and permissions
+- Verify domain configurations in `proxy/conf.d/domains/`
+- Validate proxy routing to project containers
+- Check rate limiting and security headers
+- Verify network bridge connections
+
+#### Project Container Issues  
+- Verify container build and startup
+- Check internal port exposure and conflicts
+- Validate nginx configuration inside container
+- Check volume mounts and file permissions
+- Verify network connectivity to proxy
+
+#### Script/Automation Issues
+- Validate input parameters and environment variables
+- Check script permissions and execution context
+- Verify template file generation
+- Check integration between create-project-modular.sh and proxy updates
+- Validate certificate generation and installation
+
+#### Environment Integration Issues
+- Check development vs production configuration differences
+- Verify Cloudflare integration settings (production)
+- Validate local DNS resolution (development)
+- Check port conflicts and host file updates
+- Verify SSL certificate management
+
+### 3. Network Troubleshooting Sequence
+- `nix --extra-experimental-features "nix-command flakes" develop --command podman network inspect <network-name>`
+- `nix --extra-experimental-features "nix-command flakes" develop --command podman exec <container> ping <target-container>`
+- `nix --extra-experimental-features "nix-command flakes" develop --command podman exec <container> curl -v http://<target>`
+- `ss -tlnp | grep <port>` for port conflicts
+- Check iptables/firewall rules if applicable
+
+## FAILED_APPROACHES Tracking System
+
+**INSTRUCTIONS: When an approach fails, document it here immediately to avoid repetition**
+
+### CATASTROPHIC INCREMENTAL DEPLOYMENT BUGS (FIXED DECEMBER 2024)
+
+❌ **FAILED:** Blanket domain configuration cleanup during incremental deployments
+- **Problem:** `rm -f "${proxy_dir}/conf.d/domains"/*.conf` in proxy.sh deleted ALL existing domain configurations during ANY new project deployment, causing immediate downtime for existing projects
+- **Why it failed:** Script treated every deployment as fresh deployment, not distinguishing between initial setup and incremental additions
+- **Better approach:** Only clean domain configurations during fresh deployments (when proxy container doesn't exist), preserve existing configurations during incremental deployments
+
+❌ **FAILED:** Certificate mounting only to root certs/ directory during incremental deployments
+- **Problem:** Script copied domain-specific certificates only to `/opt/nginx-multi-project/certs/{domain}/` but not to `proxy/certs/{domain}/`, causing SSL handshake failures
+- **Why it failed:** Certificate copying logic was incomplete - proxy container couldn't access certificates it referenced in domain configurations
+- **Better approach:** Always copy certificates to both locations: root certs/ AND proxy/certs/ directories with proper domain-specific subdirectories
+
+❌ **FAILED:** Duplicate nginx.conf generation functions causing container crashes
+- **Problem:** Two functions generated nginx.conf - project_files.sh (correct with http/events/user directives) and project_functions.sh (broken with only server block). The broken function overwrote the correct one
+- **Why it failed:** Code duplication without coordination, broken function executed last and overwrote working configuration
+- **Better approach:** Single source of truth for nginx.conf generation - removed duplicate function from project_functions.sh, kept only the working version in project_files.sh
+
+❌ **FAILED:** IP address detection failure after container rebuilds during incremental deployments
+- **Problem:** Container IP addresses changed after rebuilds but script used stale IPs, creating invalid proxy_pass directives like `proxy_pass http://10.89.1.106:80;` when container was actually at different IP
+- **Why it failed:** No IP detection retry logic, no verification that detected IP was reachable before using it
+- **Better approach:** Implement retry logic for IP detection with network connectivity verification before updating proxy configuration
+
+❌ **FAILED:** No network connectivity verification before proxy configuration updates
+- **Problem:** Script updated proxy configurations without verifying that new project containers were actually reachable from proxy, causing 502 errors
+- **Why it failed:** Assumed container startup meant network connectivity was working
+- **Better approach:** Test connectivity with `podman exec nginx-proxy curl -f http://container-ip:port/health` before updating proxy configuration
+
+❌ **FAILED:** Unsafe proxy configuration reload without testing
+- **Problem:** Script reloaded proxy configuration without testing syntax first, risking bringing down ALL projects if new configuration was invalid
+- **Why it failed:** No configuration validation before reload, no rollback mechanism
+- **Better approach:** Always test configuration with `nginx -t` before reload, implement rollback mechanism if reload fails
+
+❌ **FAILED:** No incremental deployment testing during development
+- **Problem:** Scripts were only tested with fresh deployments, incremental deployment bugs went undetected until production-like scenarios
+- **Why it failed:** Development workflow focused on single project deployments, not multi-project scenarios
+- **Better approach:** ALWAYS test incremental deployments in development - deploy first project, verify it works, then deploy second project while monitoring first project remains online
+
+### Network/Container Issues
+❌ **FAILED:** Starting proxy container with upstream reference to non-existent project container
+- **Problem:** nginx-proxy fails with "host not found in upstream 'demo-project'" error
+- **Why it failed:** Proxy container tried to start with domain config referencing demo-project container that wasn't running/reachable
+- **Better approach:** Ensure project containers are running and on correct network before starting proxy, or use conditional upstream checks
+
+❌ **FAILED:** Directly modifying docker-compose.yml network sections without understanding external network dependencies
+- **Problem:** Creates orphaned networks and connection failures
+- **Why it failed:** External networks require proper creation order and proxy coordination
+- **Better approach:** Use update-proxy.sh script or verify network creation sequence
+
+❌ **FAILED:** Removing SSL/TLS configurations to "simplify" debugging
+- **Problem:** Breaks security model and production parity
+- **Why it failed:** SSL is integral to the proxy routing and security headers
+- **Better approach:** Generate proper certificates or use development certificates
+
+❌ **FAILED:** Trying to create nginx user in Dockerfile when it already exists
+- **Problem:** Build fails with "adduser: user 'nginx' in use" error
+- **Why it failed:** nginx:alpine base image already has nginx user, attempting to create it again fails
+- **Better approach:** Check if user exists before creating, or modify existing user properties instead - CONFIRMED: nginx user exists in nginx:alpine base image, remove user creation commands
+
+❌ **FAILED:** Connecting project container to proxy network but proxy can't resolve container hostname
+- **Problem:** nginx-proxy can't resolve "test-debug" hostname despite both containers running (curl: (6) Could not resolve host: test-debug)
+- **Why it failed:** Connecting only one container to the shared network doesn't ensure both containers can resolve each other's hostnames
+- **Better approach:** Ensure both containers are started on the same network from the beginning, or restart proxy container after network changes
+
+### Configuration Issues
+❌ **FAILED:** Using "if" directive in wrong context in security.conf
+- **Problem:** nginx fails with '"if" directive is not allowed here in /etc/nginx/conf.d/security.conf:25'
+- **Why it failed:** "if" directive can only be used in server or location contexts, not in http context
+- **Better approach:** Move "if" directives inside server blocks or use map directive in http context
+
+❌ **FAILED:** Using "location" directive in wrong context in security.conf
+- **Problem:** nginx fails with '"location" directive is not allowed here in /etc/nginx/conf.d/security.conf:25' or line 28
+- **Why it failed:** "location" directive can only be used in server contexts, not in http context - CONFIRMED: This error occurs repeatedly in project container security.conf files
+- **Better approach:** Move location blocks to server context in main nginx.conf or create server-specific security files, or remove location blocks from security.conf entirely
+
+❌ **FAILED:** Running nginx as non-root user with log file permission issues
+- **Problem:** nginx fails with 'could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)'
+- **Why it failed:** Non-root nginx user doesn't have write permissions to /var/log/nginx/error.log
+- **Better approach:** Use stdout/stderr for logging in containers or set proper permissions in Dockerfile
+
+❌ **FAILED:** Running nginx as non-root user with cache directory permission issues
+- **Problem:** nginx fails with 'mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)'
+- **Why it failed:** Non-root nginx user doesn't have write permissions to create cache directories
+- **Better approach:** Create cache directories with proper permissions in Dockerfile or run as root user
+
+❌ **FAILED:** Setting log file permissions before switching to nginx user in Dockerfile
+- **Problem:** Persistent log permission errors despite containers running: 'could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)'
+- **Why it failed:** Dockerfile sets permissions as root but then switches to nginx user, causing permission conflicts
+- **Better approach:** Either stay as root user or properly set permissions after user switch, or use stdout/stderr logging in containers
+
+❌ **FAILED:** Domain configurations referencing non-existent upstream containers
+- **Problem:** nginx fails with '[emerg] 1#1: host not found in upstream "demo-project"' preventing all worker processes from starting
+- **Why it failed:** Even one bad domain configuration file with non-existent upstream prevents nginx from starting completely
+- **Better approach:** Remove or disable domain configurations for non-running containers, or use conditional upstream checks
+
+❌ **FAILED:** Default HTTPS server block without SSL certificates defined
+- **Problem:** nginx fails with '[emerg] no "ssl_certificate" is defined for the "listen ... ssl" directive' preventing startup
+- **Why it failed:** Default server blocks with SSL enabled require explicit certificate paths even if they only return 444 errors
+- **Better approach:** Add fallback SSL certificates to default server blocks or use separate non-SSL default servers
+
+❌ **FAILED:** Old domain configuration files preventing proxy startup after cleanup
+- **Problem:** nginx fails with '[emerg] host not found in upstream "test-debug"' after container cleanup, preventing all worker processes from starting
+- **Why it failed:** Domain configuration files from previous sessions reference containers that no longer exist, causing nginx startup failure
+- **Better approach:** Always clean up domain configuration files in proxy/conf.d/domains/ when performing fresh deployments or when containers are removed
+
+### Script/Automation Issues
+❌ **FAILED:** Create-project script failing due to stale domain configurations
+- **Problem:** Enhanced create-project script fails during proxy health check because old domain configs reference non-existent containers
+- **Why it failed:** Script didn't clean up previous session's domain configurations before starting fresh deployment
+- **Better approach:** Add cleanup of proxy/conf.d/domains/*.conf files as part of fresh deployment process or proxy health verification
+
+❌ **FAILED:** Project container security.conf with location blocks in http context
+- **Problem:** nginx fails with '[emerg] "location" directive is not allowed here in /etc/nginx/conf.d/security.conf:28' preventing project container startup
+- **Why it failed:** Generated security.conf template includes location blocks that can only be used in server context, not http context
+- **Better approach:** Remove all location blocks from security.conf template and move security rules to server context in main nginx.conf
+
+### Integration Issues
+❌ **FAILED:**
+- **Problem:**
+- **Why it failed:**  
+- **Better approach:**
+
+## Incremental Deployment Testing Protocol
+
+### MANDATORY Testing Sequence
+1. **Fresh Environment Setup**: Deploy first project in clean environment
+2. **Baseline Verification**: Confirm first project fully functional (HTTP→HTTPS redirect, SSL, content)
+3. **Incremental Deployment**: Deploy second project while monitoring first project
+4. **Continuous Monitoring**: Verify first project remains online throughout second deployment
+5. **Final Verification**: Both projects fully functional with no mutual interference
+
+### Critical Monitoring Points During Incremental Deployment
+- **Domain Configuration Preservation**: Existing domain configs in `proxy/conf.d/domains/` must remain untouched
+- **Certificate Accessibility**: Both root `certs/` and `proxy/certs/` directories must contain all project certificates
+- **Network Connectivity**: All containers must maintain network connectivity throughout deployment
+- **Proxy Configuration Validity**: Configuration syntax must remain valid throughout deployment process
+- **SSL Functionality**: Existing projects must maintain SSL functionality without interruption
+
+### Red Flags That Indicate Incremental Deployment Failure
+- Existing project returns SSL handshake errors during new deployment
+- Domain configuration files disappear from `proxy/conf.d/domains/`
+- Proxy container restarts or fails during new project deployment
+- Network connectivity lost between existing containers
+- Configuration syntax errors introduced during deployment
+
+## Architecture-Specific Debugging Commands
+
+### Essential Debugging Commands
+```bash
+# Environment check
+nix --extra-experimental-features "nix-command flakes" develop --command bash -c "echo 'Nix Shell: $IN_NIX_SHELL' && podman --version"
+
+# Container debugging
+nix --extra-experimental-features "nix-command flakes" develop --command podman logs nginx-proxy --tail 10
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy cat /etc/nginx/conf.d/domains/*.conf
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy ps aux
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy netstat -tlnp
+
+# Network debugging  
+nix --extra-experimental-features "nix-command flakes" develop --command podman network ls
+nix --extra-experimental-features "nix-command flakes" develop --command podman inspect nginx-proxy | grep -A 10 "Networks"
+nix --extra-experimental-features "nix-command flakes" develop --command podman network connect nginx-proxy-network nginx-proxy
+
+# Internal connectivity testing
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy curl -I http://test-debug:80
+
+# Error log analysis
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy tail -20 /var/log/nginx/error.log
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy tail -10 /var/log/nginx/access.log
+
+# Integration testing
+nix --extra-experimental-features "nix-command flakes" develop --command curl -I -H "Host: test-debug.local" http://localhost:8080
+nix --extra-experimental-features "nix-command flakes" develop --command curl -k -I -H "Host: test-debug.local" --http1.1 https://localhost:8443
+
+# Project container debugging
+nix --extra-experimental-features "nix-command flakes" develop --command podman logs <project-name> --tail 10
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec <project-name> curl -I http://localhost
+
+# Script debugging
+nix --extra-experimental-features "nix-command flakes" develop --command bash -x ./scripts/create-project-modular.sh --name test --domain test.local --env DEV
+
+# Incremental deployment monitoring
+nix --extra-experimental-features "nix-command flakes" develop --command watch -n 1 'curl -I -H "Host: existing-project.local" http://localhost:8080'
+```
+
+### Log Analysis Patterns
+- `502 Bad Gateway`: Usually proxy → project container connectivity
+- `404 Not Found`: Incorrect proxy routing or missing location blocks  
+- `SSL certificate problem`: Certificate path/permission issues
+- `Connection refused`: Container not running or port conflicts
+- `Name resolution failed`: DNS/networking issues
+- `host not found in upstream`: Referenced container not running or network misconfiguration
+
+## Security-Aware Debugging
+
+### NEVER Remove These Security Elements
+- SSL/TLS certificate configurations
+- Security headers (X-Frame-Options, CSP, etc.)
+- Rate limiting configurations  
+- Bad bot blocking rules
+- Network isolation between projects
+- Cloudflare IP restrictions (production)
+
+### Safe Debugging Modifications
+- Add temporary logging directives
+- Create test routes with specific log formats
+- Use debug containers on isolated networks
+- Add verbose curl commands for connectivity testing
+- Enable nginx debug mode temporarily: `error_log /var/log/nginx/debug.log debug;`
+
+## Project-Specific Quick Fixes
+
+### Common Resolution Patterns
+1. **Port conflicts**: Check `ss -tlnp`, update project port assignments
+2. **Network isolation broken**: Recreate networks with proper external references
+3. **Proxy routing failures**: Verify container naming consistency and network membership
+4. **Certificate issues**: Check paths, permissions, and regenerate if needed
+5. **Script failures**: Verify Nix environment and input parameter validation
+6. **Upstream host not found**: Ensure target containers are running and network-connected before starting proxy
+7. **Bad domain configs**: Remove domain configuration files for non-running containers
+8. **SSL config missing**: Add fallback SSL certificates to default HTTPS server blocks
+9. **No worker processes**: Check for `[emerg]` errors preventing nginx startup completely
+10. **Incremental deployment downtime**: Verify domain config preservation, certificate copying to proxy/certs/, network connectivity, and configuration testing before reload
+
+### Successful Integration Testing Patterns
+1. **HTTP Proxy Test**: `curl -I -H "Host: project.local" http://localhost:8080` should return `301 Moved Permanently`
+2. **Internal Connectivity**: `podman exec nginx-proxy curl -I http://project-name:80` should return `200 OK`
+3. **Network Verification**: Both containers should appear in same network via `podman inspect`
+4. **Worker Process Check**: `podman exec nginx-proxy ps aux` should show nginx master + worker processes
+5. **Port Binding**: `podman exec nginx-proxy netstat -tlnp` should show ports 80 and 443 listening
+6. **Incremental Deployment**: Existing project must remain accessible throughout new project deployment
+
+## Examples
+
+<example>
+# Systematic debugging session with incremental deployment testing
+1. Check environment: `nix --extra-experimental-features "nix-command flakes" develop --command echo "IN_NIX_SHELL: $IN_NIX_SHELL"`
+2. Deploy first project: `./scripts/create-project-modular.sh --name project1 --domain project1.local --env DEV`
+3. Verify first project: `curl -I -H "Host: project1.local" http://localhost:8080`
+4. Monitor first project during second deployment: `watch -n 1 'curl -I -H "Host: project1.local" http://localhost:8080'`
+5. Deploy second project: `./scripts/create-project-modular.sh --name project2 --domain project2.local --env DEV`
+6. Verify both projects working: Test both domains independently
+7. If issue found, document failed approach above before trying new solution
+</example>
+
+<example type="invalid">
+# Removing domain configurations during incremental deployment
+rm -f proxy/conf.d/domains/*.conf  # NEVER do this during incremental deployment
+# Testing only fresh deployments # NEVER skip incremental deployment testing
+# Reloading proxy without configuration testing # NEVER reload without nginx -t first
+</example>
