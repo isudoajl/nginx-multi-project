@@ -1,0 +1,35 @@
+# SSL Certificates - NEVER commit these!
+*.pem
+*.key
+*.crt
+*.cert
+certs/
+*/certs/
+**/certs/
+
+# Container logs
+logs/
+*/logs/
+**/logs/
+*.log
+
+# Project-specific generated files
+projects/*/certs/
+projects/*/logs/
+proxy/certs/
+proxy/logs/
+
+# Temporary files
+*.tmp
+*.backup.*
+*.bak
+
+# Environment files
+.env
+.env.local
+.env.production
+*.env
+
+# Container runtime files
+docker-compose.override.yml
+**/docker-compose.override.yml 

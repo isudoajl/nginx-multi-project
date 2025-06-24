@@ -50,10 +50,11 @@ function deploy_project() {
   log "Connecting project container to proxy network..."
   $CONTAINER_ENGINE network connect "${proxy_network}" "${PROJECT_NAME}" || handle_error "Failed to connect project to proxy network"
   
-  # Get project container IP address for proxy configuration
-  local container_ip=$($CONTAINER_ENGINE inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${PROJECT_NAME}")
+  # Get project container IP address for proxy configuration from the proxy network
+  # Use a different approach since network names with hyphens cause template parsing issues
+  local container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" | grep -A 10 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
   if [[ -z "${container_ip}" ]]; then
-    handle_error "Failed to get IP address for project container"
+    handle_error "Failed to get IP address for project container from proxy network"
   fi
   
   # Generate domain configuration for proxy

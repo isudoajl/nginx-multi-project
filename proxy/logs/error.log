@@ -2517,3 +2517,168 @@
 2025/06/24 16:24:24 [warn] 18#18: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
 2025/06/24 16:24:29 [warn] 19#19: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
 2025/06/24 16:24:29 [emerg] 19#19: host not found in upstream "10.89.6.410.89.1.27" in /etc/nginx/conf.d/domains/mapakms.com.conf:19
+2025/06/24 16:58:50 [notice] 1#1: signal 3 (SIGQUIT) received, shutting down
+2025/06/24 16:58:50 [notice] 15#15: gracefully shutting down
+2025/06/24 16:58:50 [notice] 15#15: exiting
+2025/06/24 16:58:50 [notice] 16#16: gracefully shutting down
+2025/06/24 16:58:50 [notice] 16#16: exiting
+2025/06/24 16:58:50 [notice] 16#16: exit
+2025/06/24 16:58:50 [notice] 15#15: exit
+2025/06/24 16:58:50 [notice] 1#1: signal 17 (SIGCHLD) received from 15
+2025/06/24 16:58:50 [notice] 1#1: worker process 15 exited with code 0
+2025/06/24 16:58:50 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 16:58:50 [notice] 1#1: signal 17 (SIGCHLD) received from 16
+2025/06/24 16:58:50 [notice] 1#1: worker process 16 exited with code 0
+2025/06/24 16:58:50 [notice] 1#1: exit
+2025/06/24 16:59:49 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 16:59:49 [notice] 1#1: using the "epoll" event method
+2025/06/24 16:59:49 [notice] 1#1: nginx/1.27.5
+2025/06/24 16:59:49 [notice] 1#1: built by gcc 14.2.0 (Alpine 14.2.0) 
+2025/06/24 16:59:49 [notice] 1#1: OS: Linux 6.8.0-58-generic
+2025/06/24 16:59:49 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+2025/06/24 16:59:49 [notice] 1#1: start worker processes
+2025/06/24 16:59:49 [notice] 1#1: start worker process 15
+2025/06/24 16:59:49 [notice] 1#1: start worker process 16
+2025/06/24 16:59:49 [warn] 17#17: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 16:59:49 [warn] 18#18: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 16:59:54 [warn] 19#19: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 16:59:54 [emerg] 19#19: host not found in upstream "10.89.6.2010.89.1.106" in /etc/nginx/conf.d/domains/mapakms.com.conf:19
+2025/06/24 17:00:42 [notice] 1#1: signal 3 (SIGQUIT) received, shutting down
+2025/06/24 17:00:42 [notice] 16#16: gracefully shutting down
+2025/06/24 17:00:42 [notice] 15#15: gracefully shutting down
+2025/06/24 17:00:42 [notice] 16#16: exiting
+2025/06/24 17:00:42 [notice] 15#15: exiting
+2025/06/24 17:00:42 [notice] 16#16: exit
+2025/06/24 17:00:42 [notice] 15#15: exit
+2025/06/24 17:00:42 [notice] 1#1: signal 17 (SIGCHLD) received from 15
+2025/06/24 17:00:42 [notice] 1#1: worker process 15 exited with code 0
+2025/06/24 17:00:42 [notice] 1#1: worker process 16 exited with code 0
+2025/06/24 17:00:42 [notice] 1#1: exit
+2025/06/24 17:00:57 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:00:57 [notice] 1#1: using the "epoll" event method
+2025/06/24 17:00:57 [notice] 1#1: nginx/1.27.5
+2025/06/24 17:00:57 [notice] 1#1: built by gcc 14.2.0 (Alpine 14.2.0) 
+2025/06/24 17:00:57 [notice] 1#1: OS: Linux 6.8.0-58-generic
+2025/06/24 17:00:57 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+2025/06/24 17:00:57 [notice] 1#1: start worker processes
+2025/06/24 17:00:57 [notice] 1#1: start worker process 15
+2025/06/24 17:00:57 [notice] 1#1: start worker process 16
+2025/06/24 17:00:57 [warn] 17#17: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:00:58 [warn] 18#18: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:03:38 [notice] 1#1: signal 3 (SIGQUIT) received, shutting down
+2025/06/24 17:03:38 [notice] 15#15: gracefully shutting down
+2025/06/24 17:03:38 [notice] 15#15: exiting
+2025/06/24 17:03:38 [notice] 16#16: gracefully shutting down
+2025/06/24 17:03:38 [notice] 16#16: exiting
+2025/06/24 17:03:38 [notice] 15#15: exit
+2025/06/24 17:03:38 [notice] 16#16: exit
+2025/06/24 17:03:38 [notice] 1#1: signal 17 (SIGCHLD) received from 15
+2025/06/24 17:03:38 [notice] 1#1: worker process 15 exited with code 0
+2025/06/24 17:03:38 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 17:03:38 [notice] 1#1: signal 17 (SIGCHLD) received from 16
+2025/06/24 17:03:38 [notice] 1#1: worker process 16 exited with code 0
+2025/06/24 17:03:38 [notice] 1#1: exit
+2025/06/24 17:03:53 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:03:53 [notice] 1#1: using the "epoll" event method
+2025/06/24 17:03:53 [notice] 1#1: nginx/1.27.5
+2025/06/24 17:03:53 [notice] 1#1: built by gcc 14.2.0 (Alpine 14.2.0) 
+2025/06/24 17:03:53 [notice] 1#1: OS: Linux 6.8.0-58-generic
+2025/06/24 17:03:53 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+2025/06/24 17:03:53 [notice] 1#1: start worker processes
+2025/06/24 17:03:53 [notice] 1#1: start worker process 15
+2025/06/24 17:03:53 [notice] 1#1: start worker process 16
+2025/06/24 17:03:53 [warn] 17#17: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:03:53 [warn] 18#18: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:03:58 [warn] 19#19: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:03:58 [warn] 19#19: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:03:58 [notice] 19#19: signal process started
+2025/06/24 17:03:58 [notice] 1#1: signal 1 (SIGHUP) received from 19, reconfiguring
+2025/06/24 17:03:58 [notice] 1#1: reconfiguring
+2025/06/24 17:03:58 [warn] 1#1: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:03:58 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:03:58 [notice] 1#1: using the "epoll" event method
+2025/06/24 17:03:58 [notice] 1#1: start worker processes
+2025/06/24 17:03:58 [notice] 1#1: start worker process 20
+2025/06/24 17:03:58 [notice] 1#1: start worker process 21
+2025/06/24 17:03:58 [notice] 15#15: gracefully shutting down
+2025/06/24 17:03:58 [notice] 16#16: gracefully shutting down
+2025/06/24 17:03:58 [notice] 16#16: exiting
+2025/06/24 17:03:58 [notice] 15#15: exiting
+2025/06/24 17:03:58 [notice] 16#16: exit
+2025/06/24 17:03:58 [notice] 15#15: exit
+2025/06/24 17:03:58 [notice] 1#1: signal 17 (SIGCHLD) received from 16
+2025/06/24 17:03:58 [notice] 1#1: worker process 15 exited with code 0
+2025/06/24 17:03:58 [notice] 1#1: worker process 16 exited with code 0
+2025/06/24 17:03:58 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 17:03:58 [warn] 22#22: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:03:58 [warn] 22#22: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:05:26 [error] 21#21: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 10.89.2.68, server: mapakms.com, request: "GET / HTTP/2.0", upstream: "http://10.89.1.94:80/", host: "mapakms.com"
+2025/06/24 17:07:09 [notice] 1#1: signal 3 (SIGQUIT) received, shutting down
+2025/06/24 17:07:09 [notice] 21#21: gracefully shutting down
+2025/06/24 17:07:09 [notice] 20#20: gracefully shutting down
+2025/06/24 17:07:09 [notice] 20#20: exiting
+2025/06/24 17:07:09 [notice] 20#20: exit
+2025/06/24 17:07:09 [notice] 1#1: signal 17 (SIGCHLD) received from 20
+2025/06/24 17:07:09 [notice] 1#1: worker process 20 exited with code 0
+2025/06/24 17:07:09 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 17:07:34 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:07:34 [notice] 1#1: using the "epoll" event method
+2025/06/24 17:07:34 [notice] 1#1: nginx/1.27.5
+2025/06/24 17:07:34 [notice] 1#1: built by gcc 14.2.0 (Alpine 14.2.0) 
+2025/06/24 17:07:34 [notice] 1#1: OS: Linux 6.8.0-58-generic
+2025/06/24 17:07:34 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+2025/06/24 17:07:34 [notice] 1#1: start worker processes
+2025/06/24 17:07:34 [notice] 1#1: start worker process 15
+2025/06/24 17:07:34 [notice] 1#1: start worker process 16
+2025/06/24 17:07:34 [warn] 17#17: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:07:35 [warn] 18#18: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:07:39 [warn] 19#19: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:07:39 [warn] 19#19: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:07:39 [notice] 19#19: signal process started
+2025/06/24 17:07:39 [notice] 1#1: signal 1 (SIGHUP) received from 19, reconfiguring
+2025/06/24 17:07:39 [notice] 1#1: reconfiguring
+2025/06/24 17:07:39 [warn] 1#1: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:07:39 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:07:39 [notice] 1#1: using the "epoll" event method
+2025/06/24 17:07:39 [notice] 1#1: start worker processes
+2025/06/24 17:07:39 [notice] 1#1: start worker process 20
+2025/06/24 17:07:39 [notice] 1#1: start worker process 21
+2025/06/24 17:07:39 [notice] 15#15: gracefully shutting down
+2025/06/24 17:07:39 [notice] 15#15: exiting
+2025/06/24 17:07:39 [notice] 15#15: exit
+2025/06/24 17:07:39 [notice] 16#16: gracefully shutting down
+2025/06/24 17:07:39 [notice] 16#16: exiting
+2025/06/24 17:07:39 [notice] 16#16: exit
+2025/06/24 17:07:39 [notice] 1#1: signal 17 (SIGCHLD) received from 15
+2025/06/24 17:07:39 [notice] 1#1: worker process 15 exited with code 0
+2025/06/24 17:07:39 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 17:07:39 [notice] 1#1: signal 17 (SIGCHLD) received from 16
+2025/06/24 17:07:39 [notice] 1#1: worker process 16 exited with code 0
+2025/06/24 17:07:39 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 17:07:40 [warn] 22#22: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:07:40 [warn] 22#22: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:08:44 [error] 20#20: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 10.89.2.69, server: mapakms.com, request: "GET / HTTP/2.0", upstream: "http://10.89.1.68:80/", host: "mapakms.com"
+2025/06/24 17:09:36 [error] 20#20: *3 connect() failed (113: Host is unreachable) while connecting to upstream, client: 10.89.2.69, server: mapakms.com, request: "GET / HTTP/2.0", upstream: "http://10.89.1.68:80/", host: "mapakms.com"
+2025/06/24 17:11:12 [warn] 24#24: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:11:12 [warn] 24#24: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:11:12 [notice] 24#24: signal process started
+2025/06/24 17:11:12 [notice] 1#1: signal 1 (SIGHUP) received from 24, reconfiguring
+2025/06/24 17:11:12 [notice] 1#1: reconfiguring
+2025/06/24 17:11:12 [warn] 1#1: the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/domains/mapakms.com.conf:12
+2025/06/24 17:11:12 [warn] 1#1: "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/nginx/certs/fallback-cert.pem"
+2025/06/24 17:11:12 [notice] 1#1: using the "epoll" event method
+2025/06/24 17:11:12 [notice] 1#1: start worker processes
+2025/06/24 17:11:12 [notice] 1#1: start worker process 25
+2025/06/24 17:11:12 [notice] 1#1: start worker process 26
+2025/06/24 17:11:12 [notice] 21#21: gracefully shutting down
+2025/06/24 17:11:12 [notice] 20#20: gracefully shutting down
+2025/06/24 17:11:12 [notice] 21#21: exiting
+2025/06/24 17:11:12 [notice] 20#20: exiting
+2025/06/24 17:11:12 [notice] 21#21: exit
+2025/06/24 17:11:12 [notice] 20#20: exit
+2025/06/24 17:11:12 [notice] 1#1: signal 17 (SIGCHLD) received from 21
+2025/06/24 17:11:12 [notice] 1#1: worker process 21 exited with code 0
+2025/06/24 17:11:12 [notice] 1#1: signal 29 (SIGIO) received
+2025/06/24 17:11:12 [notice] 1#1: signal 17 (SIGCHLD) received from 20
+2025/06/24 17:11:12 [notice] 1#1: worker process 20 exited with code 0
+2025/06/24 17:11:12 [notice] 1#1: signal 29 (SIGIO) received

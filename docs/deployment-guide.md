@@ -34,7 +34,7 @@ podman --version  # or docker --version
 ```
 
 ### System Requirements
-- **Container Engine**: Podman or Docker
+- **Container Engine**: Podman
 - **Nix Package Manager**: With flakes support
 - **Network Ports**: 8080 (HTTP), 8443 (HTTPS), project-specific ports
 - **Disk Space**: ~100MB per project
