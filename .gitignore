@@ -42,6 +42,10 @@ projects/*
 !projects/.gitignore
 !projects/README.md
 
+# Domain configurations (runtime instances)
+proxy/conf.d/domains/*
+!proxy/conf.d/domains/.gitkeep
+
 # Project-specific runtime files
 **/docker-compose.override.yml
 **/nginx.conf

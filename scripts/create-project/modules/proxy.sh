@@ -2,6 +2,9 @@
 
 # Module for proxy management and configuration
 
+# Source proxy utilities
+source "$(dirname "${BASH_SOURCE[0]}")/proxy_utils.sh"
+
 # Function: Check proxy status and create if needed
 function check_proxy() {
   log "Checking proxy status..."
@@ -78,10 +81,10 @@ function create_proxy_infrastructure() {
     $CONTAINER_ENGINE network create "${proxy_network}" || handle_error "Failed to create proxy network"
   fi
   
-  # Generate proxy certificates if they don't exist
+  # Copy master certificates if they don't exist
   local proxy_certs_dir="${proxy_dir}/certs"
-  if [[ ! -f "${proxy_certs_dir}/fallback-cert.pem" ]]; then
-    log "Generating fallback SSL certificates for proxy..."
+  if [[ ! -f "${proxy_certs_dir}/cert.pem" ]]; then
+    log "Copying master SSL certificates to proxy..."
     mkdir -p "${proxy_certs_dir}"
     generate_fallback_certificates "${proxy_certs_dir}"
   fi
@@ -140,15 +143,15 @@ function ensure_proxy_default_ssl() {
   local nginx_conf="${proxy_dir}/nginx.conf"
   
   # Check if nginx.conf has default SSL server block
-  if ! grep -q "ssl_certificate.*fallback-cert.pem" "${nginx_conf}"; then
-    log "Adding fallback SSL configuration to proxy nginx.conf..."
+  if ! grep -q "ssl_certificate.*cert.pem" "${nginx_conf}"; then
+    log "Adding master SSL configuration to proxy nginx.conf..."
     
     # Create backup
     cp "${nginx_conf}" "${nginx_conf}.backup.$(date +%s)"
     
-    # Add fallback SSL certificates to default HTTPS server block
-    sed -i '/# Default HTTPS server/,/}/s|# ssl_certificate.*|ssl_certificate /etc/nginx/certs/fallback-cert.pem;\n        ssl_certificate_key /etc/nginx/certs/fallback-key.pem;|' "${nginx_conf}"
+    # Add master SSL certificates to default HTTPS server block
+    sed -i '/# Default HTTPS server/,/}/s|# ssl_certificate.*|ssl_certificate /etc/nginx/certs/cert.pem;\n        ssl_certificate_key /etc/nginx/certs/cert-key.pem;|' "${nginx_conf}"
     
-    log "Fallback SSL configuration added to proxy nginx.conf"
+    log "Master SSL configuration added to proxy nginx.conf"
   fi
 }

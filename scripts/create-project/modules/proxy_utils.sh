@@ -2,46 +2,30 @@
 
 # Module for proxy utilities
 
-# Function: Generate fallback SSL certificates
+# Function: Copy master SSL certificates to proxy
 function generate_fallback_certificates() {
   local certs_dir="$1"
   
-  log "Generating fallback SSL certificates..."
+  log "Copying master SSL certificates to proxy..."
   
-  # Create OpenSSL configuration for fallback certificate
-  cat > "${certs_dir}/fallback.cnf" << EOC
-[req]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
-prompt = no
-
-[req_distinguished_name]
-C = US
-ST = California
-L = San Francisco
-O = Nginx Proxy
-OU = Development
-CN = nginx-proxy-fallback
-
-[v3_req]
-keyUsage = keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
-
-[alt_names]
-DNS.1 = nginx-proxy-fallback
-DNS.2 = localhost
-IP.1 = 127.0.0.1
-EOC
-
-  # Generate fallback certificate and key
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout "${certs_dir}/fallback-key.pem" \
-    -out "${certs_dir}/fallback-cert.pem" \
-    -config "${certs_dir}/fallback.cnf" \
-    -extensions v3_req || handle_error "Failed to generate fallback certificates"
+  # Define master certificate paths
+  local master_cert="${PROJECT_ROOT}/certs/cert.pem"
+  local master_key="${PROJECT_ROOT}/certs/cert-key.pem"
   
-  log "Fallback SSL certificates generated successfully"
+  # Check if master certificates exist
+  if [[ ! -f "${master_cert}" ]]; then
+    handle_error "Master certificate not found: ${master_cert}"
+  fi
+  
+  if [[ ! -f "${master_key}" ]]; then
+    handle_error "Master certificate key not found: ${master_key}"
+  fi
+  
+  # Copy master certificates to proxy certs directory
+  cp "${master_cert}" "${certs_dir}/cert.pem" || handle_error "Failed to copy master certificate"
+  cp "${master_key}" "${certs_dir}/cert-key.pem" || handle_error "Failed to copy master certificate key"
+  
+  log "Master SSL certificates copied successfully to proxy"
 }
 
 # Function: Ensure proxy has default SSL configuration
@@ -50,16 +34,16 @@ function ensure_proxy_default_ssl() {
   local nginx_conf="${proxy_dir}/nginx.conf"
   
   # Check if nginx.conf has default SSL server block
-  if ! grep -q "ssl_certificate.*fallback-cert.pem" "${nginx_conf}"; then
-    log "Adding fallback SSL configuration to proxy nginx.conf..."
+  if ! grep -q "ssl_certificate.*cert.pem" "${nginx_conf}"; then
+    log "Adding master SSL configuration to proxy nginx.conf..."
     
     # Create backup
     cp "${nginx_conf}" "${nginx_conf}.backup.$(date +%s)"
     
-    # Add fallback SSL certificates to default HTTPS server block
-    sed -i '/# Default HTTPS server/,/}/s|# ssl_certificate.*|ssl_certificate /etc/nginx/certs/fallback-cert.pem;\n        ssl_certificate_key /etc/nginx/certs/fallback-key.pem;|' "${nginx_conf}"
+    # Add master SSL certificates to default HTTPS server block
+    sed -i '/# Default HTTPS server/,/}/s|# ssl_certificate.*|ssl_certificate /etc/nginx/certs/cert.pem;\n        ssl_certificate_key /etc/nginx/certs/cert-key.pem;|' "${nginx_conf}"
     
-    log "Fallback SSL configuration added to proxy nginx.conf"
+    log "Master SSL configuration added to proxy nginx.conf"
   fi
 }
 
