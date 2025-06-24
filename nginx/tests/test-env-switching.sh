@@ -6,7 +6,6 @@
 set -e
 
 # Check if we're in Nix environment
-# Temporarily disabled for testing
 # if [ -z "$IN_NIX_SHELL" ]; then
 #   echo "Please enter Nix environment with 'nix develop' first"
 #   exit 1

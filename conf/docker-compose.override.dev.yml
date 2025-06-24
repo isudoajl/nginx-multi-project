@@ -36,14 +36,4 @@ networks:
     # Development-specific network configuration
     ipam:
       config:
-        - subnet: 172.28.{subnet-id}.0/24
-
-- hosts:
-    - "test-debug.local"
-    - "second-app.local"
-    - "mapakms.com"
-    - "fresh-test.local"
-  # Cloudflare integration disabled for now
-  # cf_token: "YOUR_CLOUDFLARE_API_TOKEN"
-  # cf_account_id: "YOUR_CLOUDFLARE_ACCOUNT_ID"
-  # cf_zone_id: "YOUR_CLOUDFLARE_ZONE_ID" 
+        - subnet: 172.28.{subnet-id}.0/24 
