@@ -1,258 +1,143 @@
 # Script API Reference
 
-This document provides detailed API documentation for all automation scripts in the Microservices Nginx Architecture. It covers all available parameters, return values, and usage examples.
+### Project Creation Scripts
 
-## Table of Contents
+#### create-project-modular.sh
 
-1. [create-project.sh](#create-projectsh)
-2. [update-hosts.sh](#update-hostssh)
-3. [dev-environment.sh](#dev-environmentsh)
-4. [generate-certs.sh](#generate-certssh)
-5. [update-proxy.sh](#update-proxysh)
+The original monolithic script for creating new project containers with all necessary configurations.
 
----
+```
+Usage: ./scripts/create-project-modular.sh [OPTIONS]
 
-## create-project.sh
+Create a new project container with all necessary configuration files.
 
-Creates a new project container with all necessary configuration files.
+Options:
+  --name, -n NAME          Project name (required, alphanumeric with hyphens)
+  --port, -p PORT          Internal container port (required, 1024-65535)
+  --domain, -d DOMAIN      Domain name (required, valid FQDN format)
+  --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)
+  --cert, -c FILE          Path to SSL certificate (optional)
+  --key, -k FILE           Path to SSL private key (optional)
+  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
+  --help, -h               Display this help message
 
-### Synopsis
-
-```bash
-./scripts/create-project.sh [OPTIONS]
+Examples:
+  ./scripts/create-project-modular.sh --name my-project --port 8080 --domain example.com
+  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e DEV
+  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e PRO
 ```
 
-### Options
+#### create-project-modular.sh
 
-| Parameter | Short | Type | Required | Default | Description |
-|----------|-------|------|----------|---------|-------------|
-| `--name` | `-n` | string | Yes | - | Project name (alphanumeric with hyphens) |
-| `--port` | `-p` | integer | Yes | - | Internal container port (1024-65535) |
-| `--domain` | `-d` | string | Yes | - | Domain name (valid FQDN format) |
-| `--frontend` | `-f` | string | No | `./projects/{project_name}/html` | Path to static files |
-| `--cert` | `-c` | string | No | `/etc/ssl/certs/cert.pem` | SSL certificate path |
-| `--key` | `-k` | string | No | `/etc/ssl/certs/private/cert-key.pem` | SSL private key path |
-| `--env` | `-e` | string | No | `DEV` | Environment type (`DEV` or `PRO`) |
-| `--cf-token` | - | string | No* | - | Cloudflare API token (required for PRO environment) |
-| `--cf-account` | - | string | No* | - | Cloudflare account ID (required for PRO environment) |
-| `--cf-zone` | - | string | No* | - | Cloudflare zone ID (required for PRO environment) |
-| `--help` | `-h` | - | No | - | Display help message |
+The refactored modular version of the project creation script. This script provides the same functionality as `create-project-modular.sh` but with a modular architecture for better maintainability.
 
-\* Required only for PRO environment with Cloudflare integration
+> **Note:** The current implementation has module path discrepancy. The script looks for modules in `scripts/modules/` but they are actually located in `scripts/create-project/modules/`. Additionally, some referenced modules (`deployment.sh` and `verification.sh`) are missing from the implementation.
 
-### Exit Codes
+```
+Usage: ./scripts/create-project-modular.sh [OPTIONS]
 
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Environment error |
-| 4 | Project creation error |
-| 5 | Deployment error |
+Create a new project container with all necessary configuration files.
 
-### Examples
+Options:
+  --name, -n NAME          Project name (required, alphanumeric with hyphens)
+  --port, -p PORT          Internal container port (required, 1024-65535)
+  --domain, -d DOMAIN      Domain name (required, valid FQDN format)
+  --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)
+  --cert, -c FILE          Path to SSL certificate (optional)
+  --key, -k FILE           Path to SSL private key (optional)
+  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
+  --help, -h               Display this help message
 
-```bash
-# Create a basic development project
-./scripts/create-project.sh --name blog --domain blog.example.com --port 8080
-
-# Create a production project with custom frontend
-./scripts/create-project.sh --name shop --domain shop.example.com --port 8081 --env PRO --frontend /path/to/shop/dist
-
-# Create a production project with Cloudflare integration
-./scripts/create-project.sh --name api --domain api.example.com --port 8082 --env PRO --cf-token YOUR_CF_TOKEN --cf-account YOUR_CF_ACCOUNT --cf-zone YOUR_CF_ZONE
+Examples:
+  ./scripts/create-project-modular.sh --name my-project --port 8080 --domain example.com
+  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e DEV
+  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e PRO
 ```
 
----
+### Modular Script Architecture
 
-## update-hosts.sh
+The modular script is organized into separate components:
 
-Updates the local hosts file with project domain entries.
+- **create-project-modular.sh**: Main script that coordinates all modules
+- **modules/common.sh**: Common functions and variables shared across modules
+- **modules/args.sh**: Command-line argument parsing and validation
+- **modules/environment.sh**: Environment validation and configuration
+- **modules/proxy.sh**: Proxy management and configuration
+- **modules/proxy_utils.sh**: Utility functions for proxy-related operations
+- **modules/project_structure.sh**: Project directory structure setup
+- **modules/project_files.sh**: Project file generation
 
-### Synopsis
+**Missing Modules (Referenced but not implemented):**
+- **modules/deployment.sh**: Project deployment functionality
+- **modules/verification.sh**: Deployment verification functionality
 
-```bash
-sudo ./scripts/update-hosts.sh [OPTIONS]
+### Other Scripts
+
+#### update-hosts.sh
+
+```
+Usage: ./scripts/update-hosts.sh [OPTIONS]
+
+Update local hosts file with domain entries for development.
+
+Options:
+  --domain, -d DOMAIN      Domain name to add/remove
+  --action, -a ACTION      Action to perform: add or remove
+  --help, -h               Display this help message
+
+Examples:
+  ./scripts/update-hosts.sh --domain example.com --action add
+  ./scripts/update-hosts.sh -d example.com -a remove
 ```
 
-### Options
+#### dev-environment.sh
 
-| Parameter | Short | Type | Required | Default | Description |
-|----------|-------|------|----------|---------|-------------|
-| `--domain` | `-d` | string | Yes | - | Domain name to add/remove |
-| `--action` | `-a` | string | Yes | - | Action to perform (`add` or `remove`) |
-| `--ip` | `-i` | string | No | `127.0.0.1` | IP address to use |
-| `--help` | `-h` | - | No | - | Display help message |
+```
+Usage: ./scripts/dev-environment.sh [OPTIONS]
 
-### Exit Codes
+Set up development environment for a project.
 
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Permission error (not run as root) |
-| 3 | Invalid arguments |
-| 4 | Hosts file error |
+Options:
+  --project, -p PROJECT    Project name
+  --action, -a ACTION      Action to perform: setup or teardown
+  --port, -P PORT          Port to use (required for setup)
+  --help, -h               Display this help message
 
-### Examples
-
-```bash
-# Add a domain to hosts file
-sudo ./scripts/update-hosts.sh --domain example.com --action add
-
-# Add a domain with custom IP
-sudo ./scripts/update-hosts.sh --domain example.com --action add --ip 192.168.1.100
-
-# Remove a domain from hosts file
-sudo ./scripts/update-hosts.sh --domain example.com --action remove
+Examples:
+  ./scripts/dev-environment.sh --project my-project --action setup --port 8080
+  ./scripts/dev-environment.sh -p my-project -a teardown
 ```
 
----
+#### manage-proxy.sh
 
-## dev-environment.sh
+```
+Usage: ./scripts/manage-proxy.sh [OPTIONS]
 
-Manages development environment for projects.
+Manage the nginx proxy container.
 
-### Synopsis
+Options:
+  --action, -a ACTION      Action to perform: start, stop, restart, status
+  --help, -h               Display this help message
 
-```bash
-./scripts/dev-environment.sh [OPTIONS]
+Examples:
+  ./scripts/manage-proxy.sh --action start
+  ./scripts/manage-proxy.sh -a restart
 ```
 
-### Options
+#### generate-certs.sh
 
-| Parameter | Short | Type | Required | Default | Description |
-|----------|-------|------|----------|---------|-------------|
-| `--project` | `-p` | string | Yes | - | Project name to manage |
-| `--action` | `-a` | string | Yes | - | Action to perform (`setup`, `start`, `stop`, or `reload`) |
-| `--port` | `-port` | integer | No | `8080` | Development port to use |
-| `--subnet` | `-s` | integer | No | Random (1-254) | Subnet ID for development network |
-| `--help` | `-h` | - | No | - | Display help message |
-
-### Exit Codes
-
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Environment error |
-| 4 | Project not found |
-| 5 | Action execution error |
-
-### Examples
-
-```bash
-# Setup development environment
-./scripts/dev-environment.sh --project my-project --action setup --port 9000
-
-# Start development environment
-./scripts/dev-environment.sh --project my-project --action start
-
-# Reload development environment
-./scripts/dev-environment.sh --project my-project --action reload
-
-# Stop development environment
-./scripts/dev-environment.sh --project my-project --action stop
 ```
+Usage: ./scripts/generate-certs.sh [OPTIONS]
 
----
+Generate SSL certificates for development or production.
 
-## generate-certs.sh
+Options:
+  --domain, -d DOMAIN      Domain name (required)
+  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
+  --output, -o DIR         Output directory (optional)
+  --help, -h               Display this help message
 
-Generates SSL certificates for development or production environments.
-
-### Synopsis
-
-```bash
-./scripts/generate-certs.sh [OPTIONS]
-```
-
-### Options
-
-| Parameter | Short | Type | Required | Default | Description |
-|----------|-------|------|----------|---------|-------------|
-| `--domain` | `-d` | string | Yes | - | Domain name for the certificate |
-| `--output` | `-o` | string | Yes | - | Output directory for certificates |
-| `--env` | `-e` | string | No | `DEV` | Environment type (`DEV` or `PRO`) |
-| `--days` | - | integer | No | `365` | Validity period in days (DEV only) |
-| `--country` | `-c` | string | No | `US` | Country code for certificate |
-| `--state` | `-s` | string | No | `State` | State/Province for certificate |
-| `--locality` | `-l` | string | No | `City` | City/Locality for certificate |
-| `--org` | - | string | No | `Organization` | Organization name for certificate |
-| `--help` | `-h` | - | No | - | Display help message |
-
-### Exit Codes
-
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | OpenSSL error |
-| 4 | Output directory error |
-
-### Examples
-
-```bash
-# Generate development certificate
-./scripts/generate-certs.sh --domain example.com --output ./projects/my-project/certs
-
-# Generate development certificate with custom validity
-./scripts/generate-certs.sh --domain example.com --output ./projects/my-project/certs --days 730
-
-# Generate production certificate request
-./scripts/generate-certs.sh --domain example.com --output ./projects/my-project/certs --env PRO --org "My Company"
-```
-
----
-
-## update-proxy.sh
-
-Updates the central proxy configuration when a project is added, removed, or modified.
-
-### Synopsis
-
-```bash
-./scripts/update-proxy.sh [OPTIONS]
-```
-
-### Options
-
-| Parameter | Short | Type | Required | Default | Description |
-|----------|-------|------|----------|---------|-------------|
-| `--action` | `-a` | string | Yes | - | Action to perform (`add`, `remove`, or `update`) |
-| `--name` | `-n` | string | Yes | - | Project name |
-| `--domain` | `-d` | string | No* | - | Domain name (required for `add` and `update`) |
-| `--port` | `-p` | integer | No* | - | Container port (required for `add`) |
-| `--ssl` | `-s` | boolean | No | `false` | Enable SSL for the domain |
-| `--help` | `-h` | - | No | - | Display help message |
-
-\* Required depending on the action
-
-### Exit Codes
-
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Proxy configuration error |
-| 4 | Reload error |
-
-### Examples
-
-```bash
-# Add project to proxy
-./scripts/update-proxy.sh --action add --name my-project --domain example.com --port 8080
-
-# Add project with SSL
-./scripts/update-proxy.sh --action add --name my-project --domain example.com --port 8080 --ssl
-
-# Update project in proxy
-./scripts/update-proxy.sh --action update --name my-project --domain new-domain.com
-
-# Remove project from proxy
-./scripts/update-proxy.sh --action remove --name my-project
+Examples:
+  ./scripts/generate-certs.sh --domain example.com
+  ./scripts/generate-certs.sh -d example.com -e PRO -o /path/to/certs
 ``` 
