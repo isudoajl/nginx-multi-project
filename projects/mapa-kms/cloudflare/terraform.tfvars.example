@@ -1,4 +1,4 @@
 cloudflare_api_token = "PaiOFp5TuWBJR4PNWd0OnLDHhxgc2jMoc8CM9q-M"
 cloudflare_zone_id   = "3979cd48f9bce29d5737327cedf29bd3"
 cloudflare_account_id = "5ac066b569a87bac7788c89b5f7653fa"
-server_ip            = "1.2.3.4"  # Replace with your actual server IP
+server_ip            = "188.245.192.5"  # Your actual server IP

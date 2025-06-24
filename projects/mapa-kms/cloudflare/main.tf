@@ -18,6 +18,7 @@ resource "cloudflare_record" "domain" {
   type    = "A"
   ttl     = 1
   proxied = true
+  allow_overwrite = true
 }
 
 resource "cloudflare_record" "www" {
@@ -27,12 +28,15 @@ resource "cloudflare_record" "www" {
   type    = "CNAME"
   ttl     = 1
   proxied = true
+  allow_overwrite = true
 }
 
-resource "cloudflare_page_rule" "https" {
-  zone_id = var.cloudflare_zone_id
-  target  = "http://mapakms.com/*"
-  actions {
-    always_use_https = true
-  }
-}
+# Page rule commented out due to API token permissions
+# You can enable this manually in Cloudflare dashboard: SSL/TLS > Edge Certificates > Always Use HTTPS
+# resource "cloudflare_page_rule" "https" {
+#   zone_id = var.cloudflare_zone_id
+#   target  = "http://mapakms.com/*"
+#   actions {
+#     always_use_https = true
+#   }
+# }
