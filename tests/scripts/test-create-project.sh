@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TEST_PROJECT="test-project"
 TEST_DOMAIN="test-domain.local"
 TEST_PORT="9876"
-CREATE_PROJECT_SCRIPT="${PROJECT_ROOT}/scripts/create-project.sh"
+CREATE_PROJECT_SCRIPT="${PROJECT_ROOT}/scripts/create-project-modular.sh"
 TEMP_DIR="${PROJECT_ROOT}/tests/temp"
 PROJECTS_DIR="${TEMP_DIR}/projects"
 

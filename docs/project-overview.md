@@ -10,7 +10,7 @@ The **Microservices Nginx Architecture** is a complete, production-ready contain
 - **✅ Complete Infrastructure**: Central proxy + isolated project containers
 - **✅ Zero-Downtime Operations**: Incremental project addition without service disruption
 - **✅ Multi-Environment Support**: Development and production configurations
-- **✅ Enterprise-Grade Security**: SSL/TLS, Cloudflare, comprehensive security headers
+- **✅ Enterprise-Grade Security**: SSL/TLS, comprehensive security headers
 - **✅ Battle-Tested Architecture**: From-scratch and incremental deployment validated
 - **✅ Developer-Friendly Experience**: Single-command deployment with comprehensive automation
 
@@ -56,7 +56,7 @@ Performance Metrics:
 graph TB
     subgraph "External Access"
         LB[Load Balancer<br/>Optional]
-        CF[Cloudflare<br/>CDN + Security]
+        SEC[Security Layer<br/>Headers + SSL]
     end
     
     subgraph "Nginx Proxy Layer"
@@ -98,7 +98,7 @@ graph TB
 - **Function**: Traffic routing and SSL termination
 - **Features**: Multi-domain routing, security headers, rate limiting
 - **Network**: Gateway to all project containers
-- **Security**: DDoS protection, bad bot blocking, Cloudflare integration
+- **Security**: DDoS protection, bad bot blocking, comprehensive security headers
 
 #### 2. **Project Containers** ✅
 - **Function**: Isolated microservice hosting
@@ -117,7 +117,7 @@ graph TB
 ### **Development Environment**
 ```bash
 # Quick development setup with local SSL and DNS
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-dev-app \
   --port 8090 \
   --domain my-dev-app.local \
@@ -132,8 +132,8 @@ graph TB
 
 ### **Production Environment**
 ```bash
-# Production deployment with Cloudflare integration
-./scripts/create-project.sh \
+# Production deployment
+./scripts/create-project-modular.sh \
   --name my-prod-app \
   --port 8090 \
   --domain my-prod-app.com \
@@ -144,7 +144,7 @@ graph TB
 ```
 
 **Features:**
-- Cloudflare CDN and security
+- Production-grade security
 - Production SSL certificates
 - WAF rules and rate limiting
 - Performance optimization
@@ -153,7 +153,7 @@ graph TB
 ```bash
 # Multi-project deployment for enterprise
 for app in api-service web-frontend admin-panel; do
-  ./scripts/create-project.sh \
+  ./scripts/create-project-modular.sh \
     --name $app \
     --port $((8090 + $RANDOM % 100)) \
     --domain $app.company.com \
@@ -176,7 +176,7 @@ done
 | **Project Containers** | 2023-07-16 | ✅ Complete | Isolated containers with health checks |
 | **Automation Scripts** | 2025-06-22 | ✅ Enhanced | Core automation with validation |
 | **Development Environment** | 2024-06-30 | ✅ Complete | Local SSL, DNS, hot reload |
-| **Production Environment** | 2024-07-01 | ✅ Complete | Cloudflare integration, cert management |
+| **Production Environment** | 2024-07-01 | ✅ Complete | Production cert management |
 | **Environment Integration** | 2024-06-23 | ✅ Complete | Comprehensive testing and validation |
 | **Documentation Suite** | 2025-06-23 | ✅ Complete | Complete documentation and handover |
 | **🎉 Incremental Deployment** | **2025-06-23** | **✅ NEW** | **Zero-downtime project addition** |
@@ -202,7 +202,7 @@ done
 - **Tooling**: Automated scripts and validation tools
 
 ### **Production Integration**
-- **CDN**: Cloudflare with Terraform automation
+- **SSL/TLS**: Production-grade certificate management
 - **DNS**: Automated DNS management
 - **Security**: WAF rules, DDoS protection, rate limiting
 - **Monitoring**: Access logs, error tracking, health checks
@@ -231,7 +231,7 @@ cd nginx-multi-project-INTEGRATION
 nix develop
 
 # 3. Create your first project
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
   --domain my-first-app.local \
@@ -245,14 +245,14 @@ nix develop
 ### Adding More Projects
 ```bash
 # Add second project (incremental deployment)
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-second-app \
   --port 8091 \
   --domain my-second-app.local \
   --env DEV
 
 # Add third project
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-third-app \
   --port 8092 \
   --domain my-third-app.local \
@@ -431,4 +431,126 @@ The **Microservices Nginx Architecture** represents a complete transformation fr
 **Architecture Achievement**: Successfully transforms monolithic nginx into scalable microservices platform 🚀
 **Production Readiness**: All systems operational and battle-tested ✅
 
-The Microservices Nginx Architecture delivers enterprise-grade container orchestration with the simplicity of single-command deployment, making it the perfect solution for both development and production environments! 🎯 
+The Microservices Nginx Architecture delivers enterprise-grade container orchestration with the simplicity of single-command deployment, making it the perfect solution for both development and production environments! 🎯
+
+# Project Overview
+
+This document provides a high-level overview of the Nginx Multi-Project Architecture.
+
+## Purpose
+
+The Nginx Multi-Project Architecture allows you to:
+
+1. Create and manage multiple independent Nginx-based projects
+2. Deploy each project in its own isolated container
+3. Access all projects through a central reverse proxy
+4. Support both development and production environments
+5. Manage SSL certificates automatically
+6. Configure domain routing with minimal effort
+
+## Core Components
+
+### Proxy Container
+
+The central reverse proxy that routes traffic to individual project containers based on domain names.
+
+- **Location**: `/proxy/`
+- **Configuration**: `/proxy/nginx.conf` and `/proxy/conf.d/`
+- **Domains**: Each domain configuration is stored in `/proxy/conf.d/domains/`
+- **Certificates**: SSL certificates are stored in `/proxy/certs/`
+
+### Project Containers
+
+Individual containers for each project, each with its own Nginx configuration.
+
+- **Location**: `/projects/{project-name}/`
+- **Configuration**: Project-specific Nginx configuration
+- **Content**: Static files, web applications, or API endpoints
+
+### Automation Scripts
+
+A collection of scripts to automate common tasks:
+
+- **create-project-modular.sh**: Create a new project with all necessary configuration
+- **create-project-modular.sh**: Modular version of the project creation script
+- **dev-environment.sh**: Configure development environment
+- **manage-proxy.sh**: Manage the proxy container
+- **generate-certs.sh**: Generate SSL certificates
+- **update-hosts.sh**: Update local hosts file for development
+
+#### Modular Script Architecture
+
+The `create-project-modular.sh` script is a refactored version of the original `create-project-modular.sh` script, organized into separate modules for better maintainability:
+
+- **main.sh**: Main script that coordinates all modules
+- **modules/common.sh**: Common functions and variables
+- **modules/args.sh**: Command-line argument parsing
+- **modules/environment.sh**: Environment validation
+- **modules/proxy.sh**: Proxy management
+- **modules/proxy_utils.sh**: Proxy utility functions
+- **modules/project_structure.sh**: Project directory setup
+- **modules/project_files.sh**: Project file generation
+
+## Environments
+
+### Development (DEV)
+
+- Local development environment
+- Self-signed SSL certificates
+- Local hosts file integration
+- Direct access to project containers
+
+### Production (PRO)
+
+- Production deployment environment
+- Support for real SSL certificates
+- Production-ready security
+- Enhanced security settings
+
+## Workflow
+
+1. Create a new project using the create-project script
+2. Develop and test the project locally in DEV environment
+3. Deploy the project to production using PRO environment
+4. Manage the project lifecycle using the provided scripts
+
+## Directory Structure
+
+```
+nginx-multi-project/
+├── certs/                # Global certificates
+├── docs/                 # Documentation
+├── proxy/                # Proxy container
+│   ├── certs/            # Proxy certificates
+│   ├── conf.d/           # Configuration files
+│   │   └── domains/      # Domain configurations
+│   ├── html/             # Static files
+│   ├── logs/             # Log files
+│   ├── nginx.conf        # Main configuration
+│   └── Dockerfile        # Container definition
+├── projects/             # Project containers
+│   └── {project-name}/   # Individual project
+│       ├── certs/        # Project certificates
+│       ├── conf.d/       # Configuration files
+│       ├── html/         # Static files
+│       ├── logs/         # Log files
+│       ├── nginx.conf    # Main configuration
+│       └── Dockerfile    # Container definition
+└── scripts/              # Automation scripts
+    ├── create-project/   # Modular script components
+    │   ├── main.sh       # Main script
+    │   └── modules/      # Script modules
+    │       ├── args.sh
+    │       ├── common.sh
+    │       ├── environment.sh
+    │       ├── project_files.sh
+    │       ├── project_structure.sh
+    │       ├── proxy.sh
+    │       └── proxy_utils.sh
+    ├── create-project-modular.sh         # Original project creation script
+    ├── create-project-modular.sh # Modular project creation script
+    ├── dev-environment.sh        # Development environment setup
+    ├── generate-certs.sh         # Certificate generation
+    ├── manage-proxy.sh           # Proxy management
+    └── update-hosts.sh           # Hosts file management
+``` 

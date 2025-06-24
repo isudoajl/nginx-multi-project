@@ -32,14 +32,14 @@ echo $IN_NIX_SHELL  # Should return 1
 ### Create Your First Project
 ```bash
 # Development environment with local SSL & DNS
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-app \
   --port 8090 \
   --domain my-app.local \
   --env DEV
 
 # Production environment with Cloudflare
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-app \
   --port 8090 \
   --domain my-app.com \
@@ -52,7 +52,7 @@ echo $IN_NIX_SHELL  # Should return 1
 ### Add More Projects (Zero-Downtime)
 ```bash
 # Incremental deployment - existing projects remain untouched
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name second-app \
   --port 8091 \
   --domain second-app.local \
@@ -191,3 +191,118 @@ Supports unlimited concurrent projects
 The Microservices Nginx Architecture delivers enterprise-grade container orchestration with the simplicity of single-command deployment, making it perfect for both development and production environments!
 
 **Get started now:** [Complete Deployment Guide](docs/deployment-guide.md) 🚀 
+
+# Nginx Multi-Project Architecture
+
+A robust solution for managing multiple Nginx-based projects with a centralized proxy, container isolation, and automated deployment.
+
+## Features
+
+- **Multi-project Management**: Host multiple projects with domain-based routing
+- **Container Isolation**: Each project runs in its own isolated container
+- **Reverse Proxy**: Central Nginx proxy for routing and SSL termination
+- **Automated Deployment**: Simple scripts for project creation and management
+- **Development & Production**: Support for both environments with appropriate configurations
+- **SSL Management**: Automatic certificate generation and configuration
+- **Network Isolation**: Projects are isolated in their own networks
+- **Modular Architecture**: Refactored scripts with modular design for better maintainability
+
+## Quick Start
+
+### Prerequisites
+
+- Linux environment
+- Nix package manager with flakes enabled
+- Docker or Podman
+
+### Setup
+
+1. Clone this repository:
+   ```
+   git clone https://github.com/yourusername/nginx-multi-project.git
+   cd nginx-multi-project
+   ```
+
+2. Enter the Nix development environment:
+   ```
+   nix --extra-experimental-features "nix-command flakes" develop
+   ```
+
+3. Create your first project:
+   ```
+   ./scripts/create-project-modular.sh --name my-project --domain example.local --port 8080
+   ```
+   
+   Or use the modular version:
+   ```
+   ./scripts/create-project-modular.sh --name my-project --domain example.local --port 8080
+   ```
+
+4. Access your project:
+   - Development: http://example.local (after adding to your hosts file)
+   - Direct access: http://localhost:8080
+
+## Project Structure
+
+```
+nginx-multi-project/
+├── certs/                # Global certificates
+├── docs/                 # Documentation
+├── proxy/                # Proxy container
+│   ├── certs/            # Proxy certificates
+│   ├── conf.d/           # Configuration files
+│   │   └── domains/      # Domain configurations
+│   ├── html/             # Static files
+│   ├── logs/             # Log files
+│   ├── nginx.conf        # Main configuration
+│   └── Dockerfile        # Container definition
+├── projects/             # Project containers
+│   └── {project-name}/   # Individual project
+├── scripts/              # Automation scripts
+│   ├── create-project/   # Modular script components
+│   │   ├── main.sh       # Main script
+│   │   └── modules/      # Script modules
+│   ├── create-project-modular.sh         # Original project creation script
+│   ├── create-project-modular.sh # Modular project creation script
+│   └── [other scripts]
+└── tests/                # Test scripts
+```
+
+## Script Architecture
+
+The project includes both the original monolithic script and a refactored modular version:
+
+- **create-project-modular.sh**: Original monolithic script
+- **create-project-modular.sh**: Refactored modular version with the same functionality
+
+### Modular Structure
+
+The modular script is organized into separate components:
+
+- **main.sh**: Main script that coordinates all modules
+- **modules/common.sh**: Common functions and variables
+- **modules/args.sh**: Command-line argument parsing
+- **modules/environment.sh**: Environment validation
+- **modules/proxy.sh**: Proxy management
+- **modules/proxy_utils.sh**: Proxy utility functions
+- **modules/project_structure.sh**: Project directory setup
+- **modules/project_files.sh**: Project file generation
+
+## Documentation
+
+For detailed documentation, please refer to the following:
+
+- [Project Overview](docs/project-overview.md)
+- [Deployment Guide](docs/deployment-guide.md)
+- [Script API Reference](docs/script-api-reference.md)
+- [Troubleshooting Guide](docs/troubleshooting-guide.md)
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Nginx team for their excellent web server
+- Docker/Podman for container technology
+- Nix for reproducible development environments 

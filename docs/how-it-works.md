@@ -68,12 +68,12 @@ The Nginx Multi-Project system is a container-based architecture designed to hos
 
 ### 3. Certificate Management
 
-- **Development**: Self-signed certificates generated automatically
-- **Production**: Certificates stored in `/proxy/certs/{domain}/`
-- **Integration**: Certificates are:
-  1. Generated or copied to project's `certs/` directory
-  2. Copied to proxy's domain-specific cert directory
-  3. Embedded in Docker images during build
+- **Certificates**: Generic certificates in `/certs/`, domain-specific copies in `/certs/{domain}/`
+- **Integration**: Certificate workflow:
+  1. Generic certificates stored in `/opt/nginx-multi-project/certs/`
+  2. Script creates domain-specific directory `/opt/nginx-multi-project/certs/{domain}/`
+  3. Copies generic certificates to domain-specific directory for new projects
+  4. Both project containers and proxy use domain-specific certificates
 
 ## Deployment Process
 
@@ -135,7 +135,6 @@ This prevents the "host not found in upstream" errors that would otherwise cause
 ### Production Environment (PRO)
 
 - Production-grade certificates
-- Cloudflare integration (optional)
 - Enhanced security settings
 - Performance optimizations
 

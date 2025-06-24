@@ -335,7 +335,7 @@ Project containers integrate with the central Nginx proxy through:
 
 Project containers are managed through automation scripts:
 
-1. **Creation**: `create-project.sh` generates project container files
+1. **Creation**: `create-project-modular.sh` generates project container files
 2. **Proxy Update**: `update-proxy.sh` registers the project with the proxy
 3. **Certificate Management**: `generate-certs.sh` creates SSL certificates
 4. **Development Environment**: `dev-environment.sh` manages the development setup

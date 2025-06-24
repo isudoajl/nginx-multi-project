@@ -18,7 +18,7 @@ This document provides comprehensive information about the production environmen
 The production environment is designed for high availability, security, and performance. It includes the following components:
 
 - **Nginx**: Serves as the primary web server and reverse proxy
-- **Cloudflare**: Provides CDN, WAF, and DDoS protection
+- **Security Headers**: Comprehensive security header configuration
 - **SSL/TLS**: Ensures secure communication with end-users
 - **Monitoring**: Tracks system health and performance metrics
 - **Logging**: Captures detailed information for troubleshooting and analysis
@@ -84,58 +84,24 @@ If issues are encountered after deployment:
 
 ## Port Forwarding in Production
 
-In production environments, the Nginx proxy container listens on non-privileged ports (8080/8443) to avoid requiring root privileges. However, external users need to access the standard HTTP/HTTPS ports (80/443). To handle this, we use port forwarding.
+For production environments, the proxy container runs on unprivileged ports (8080 for HTTP, 8443 for HTTPS). To expose the standard ports (80/443), you need to set up port forwarding manually using `iptables` or `nft`.
 
-### Setting Up Port Forwarding
-
-```bash
-# Enter the Nix environment
-nix develop
-
-# Set up port forwarding (requires root privileges)
-sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
-```
-
-Alternatively, you can use the dedicated port forwarding script:
+For example, to redirect incoming traffic from port 80 to 8080, you can use:
 
 ```bash
-sudo ./scripts/setup-port-forwarding.sh
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
 ```
 
-### How Port Forwarding Works
-
-The port forwarding setup:
-
-1. Creates iptables rules to redirect traffic from ports 80/443 to 8080/8443
-2. Makes these rules persistent across system reboots
-3. Creates a systemd service if needed for automatic startup
-
-### Traffic Flow with Port Forwarding
-
-```
-External Users → Port 80/443 → iptables Redirect → Ports 8080/8443 → Nginx Proxy Container
-```
-
-When combined with Cloudflare:
-
-```
-Users → Cloudflare Edge (Port 80/443) → Your Server (Port 80/443) → iptables Redirect → Ports 8080/8443 → Nginx Proxy
-```
-
-### Verifying Port Forwarding
-
-To verify that port forwarding is working correctly:
+For redirecting local requests, you might use the `OUTPUT` chain:
 
 ```bash
-# Check the iptables rules
-sudo iptables -t nat -L PREROUTING
-
-# Test HTTP access
-curl -I http://your-domain.com
-
-# Test HTTPS access
-curl -k -I https://your-domain.com
+sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 80 -j REDIRECT --to-port 8080
 ```
+
+These rules are not persistent and will need to be reapplied on reboot.
+
+### 4. Health Checks
 
 ## Certificate Management
 
@@ -244,7 +210,7 @@ The production environment implements several security measures:
 - `Content-Security-Policy`: Restricts resource loading
 - `Strict-Transport-Security`: Enforces HTTPS connections
 
-### Cloudflare Security Features
+### Security Features
 
 - Web Application Firewall (WAF)
 - DDoS protection
@@ -333,11 +299,11 @@ tail -f /var/log/nginx/error.log
 **Solution**:
 - Check for high CPU or memory usage
 - Review access logs for unusual traffic patterns
-- Verify Cloudflare optimization settings
+- Verify SSL/TLS configuration
 - Check for network bottlenecks
 
 ### Support Resources
 
 - Internal documentation: `/nginx/docs/`
 - Nginx official documentation: [https://nginx.org/en/docs/](https://nginx.org/en/docs/)
-- Cloudflare documentation: [https://developers.cloudflare.com/](https://developers.cloudflare.com/) 
+- Nginx documentation: [https://nginx.org/en/docs/](https://nginx.org/en/docs/) 

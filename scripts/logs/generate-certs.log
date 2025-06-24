@@ -179,3 +179,88 @@
 [2025-06-24 00:12:04]   3. Keep the private key (/opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem) secure
 [2025-06-24 00:12:04]   4. Configure your web server to use both files
 [2025-06-24 00:12:04] Certificate generation process complete!
+[2025-06-24 13:35:42] Generating self-signed certificate for test-deploy.local (valid for 365 days)
+[2025-06-24 13:35:42] Self-signed certificate generated successfully:
+[2025-06-24 13:35:42]   - Private key: /opt/nginx-multi-project/projects/test-deploy/certs/cert-key.pem
+[2025-06-24 13:35:42]   - Certificate: /opt/nginx-multi-project/projects/test-deploy/certs/cert.pem
+[2025-06-24 13:35:42] Certificate details:
+[2025-06-24 13:35:42] To trust this certificate in your browser:
+[2025-06-24 13:35:42]   - Import /opt/nginx-multi-project/projects/test-deploy/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:35:42]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:35:42] Certificate generation process complete!
+[2025-06-24 13:38:14] Generating self-signed certificate for test-deploy.local (valid for 365 days)
+[2025-06-24 13:38:14] Self-signed certificate generated successfully:
+[2025-06-24 13:38:14]   - Private key: /opt/nginx-multi-project/projects/test-deploy/certs/cert-key.pem
+[2025-06-24 13:38:14]   - Certificate: /opt/nginx-multi-project/projects/test-deploy/certs/cert.pem
+[2025-06-24 13:38:14] Certificate details:
+[2025-06-24 13:38:14] To trust this certificate in your browser:
+[2025-06-24 13:38:14]   - Import /opt/nginx-multi-project/projects/test-deploy/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:38:14]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:38:14] Certificate generation process complete!
+[2025-06-24 13:44:10] Preparing for production certificate for mapakms.com
+[2025-06-24 13:44:10] Certificate Signing Request (CSR) generated successfully:
+[2025-06-24 13:44:10]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:44:10]   - CSR file: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.csr
+[2025-06-24 13:44:10] CSR details:
+[2025-06-24 13:44:10] To obtain a production certificate:
+[2025-06-24 13:44:10]   1. Submit the CSR (/opt/nginx-multi-project/projects/mapa-kms/certs/cert.csr) to your certificate authority
+[2025-06-24 13:44:10]   2. Once you receive the certificate, save it as /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:44:10]   3. Keep the private key (/opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem) secure
+[2025-06-24 13:44:10]   4. Configure your web server to use both files
+[2025-06-24 13:44:10] Certificate generation process complete!
+[2025-06-24 13:53:13] Preparing for production certificate for mapakms.com
+[2025-06-24 13:53:13] Certificate Signing Request (CSR) generated successfully:
+[2025-06-24 13:53:13]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:53:13]   - CSR file: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.csr
+[2025-06-24 13:53:13] CSR details:
+[2025-06-24 13:53:13] To obtain a production certificate:
+[2025-06-24 13:53:13]   1. Submit the CSR (/opt/nginx-multi-project/projects/mapa-kms/certs/cert.csr) to your certificate authority
+[2025-06-24 13:53:13]   2. Once you receive the certificate, save it as /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:53:13]   3. Keep the private key (/opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem) secure
+[2025-06-24 13:53:13]   4. Configure your web server to use both files
+[2025-06-24 13:53:13] Certificate generation process complete!
+[2025-06-24 13:54:08] Generating self-signed certificate for mapakms.com (valid for 365 days)
+[2025-06-24 13:54:08] Self-signed certificate generated successfully:
+[2025-06-24 13:54:08]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:54:08]   - Certificate: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:54:08] Certificate details:
+[2025-06-24 13:54:08] To trust this certificate in your browser:
+[2025-06-24 13:54:08]   - Import /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:54:08]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:54:08] Certificate generation process complete!
+[2025-06-24 13:55:08] Generating self-signed certificate for mapakms.com (valid for 365 days)
+[2025-06-24 13:55:08] Self-signed certificate generated successfully:
+[2025-06-24 13:55:08]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:55:08]   - Certificate: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:55:08] Certificate details:
+[2025-06-24 13:55:08] To trust this certificate in your browser:
+[2025-06-24 13:55:08]   - Import /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:55:08]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:55:08] Certificate generation process complete!
+[2025-06-24 13:55:50] Generating self-signed certificate for mapakms.com (valid for 365 days)
+[2025-06-24 13:55:50] Self-signed certificate generated successfully:
+[2025-06-24 13:55:50]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:55:50]   - Certificate: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:55:50] Certificate details:
+[2025-06-24 13:55:50] To trust this certificate in your browser:
+[2025-06-24 13:55:50]   - Import /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:55:50]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:55:50] Certificate generation process complete!
+[2025-06-24 13:56:41] Generating self-signed certificate for mapakms.com (valid for 365 days)
+[2025-06-24 13:56:41] Self-signed certificate generated successfully:
+[2025-06-24 13:56:41]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:56:41]   - Certificate: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:56:41] Certificate details:
+[2025-06-24 13:56:41] To trust this certificate in your browser:
+[2025-06-24 13:56:41]   - Import /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:56:41]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:56:41] Certificate generation process complete!
+[2025-06-24 13:57:35] Generating self-signed certificate for mapakms.com (valid for 365 days)
+[2025-06-24 13:57:35] Self-signed certificate generated successfully:
+[2025-06-24 13:57:35]   - Private key: /opt/nginx-multi-project/projects/mapa-kms/certs/cert-key.pem
+[2025-06-24 13:57:35]   - Certificate: /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem
+[2025-06-24 13:57:35] Certificate details:
+[2025-06-24 13:57:35] To trust this certificate in your browser:
+[2025-06-24 13:57:35]   - Import /opt/nginx-multi-project/projects/mapa-kms/certs/cert.pem into your browser's certificate store
+[2025-06-24 13:57:35]   - For development, you may need to add an exception in your browser
+[2025-06-24 13:57:35] Certificate generation process complete!

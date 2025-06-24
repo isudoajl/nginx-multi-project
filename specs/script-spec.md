@@ -12,11 +12,11 @@ The script automation system now provides:
 - **✅ Hot Configuration Updates**: Live proxy updates without service interruption
 - **✅ Comprehensive Validation**: End-to-end health verification and testing
 
-## Core Script: `create-project.sh` ✅ **ENHANCED**
+## Core Script: `create-project-modular.sh` ✅ **ENHANCED**
 
 ### Revolutionary Capabilities (Implemented 2025-06-23)
 
-The create-project.sh script has been transformed into an intelligent deployment system that supports both from-scratch infrastructure creation and zero-downtime incremental deployment.
+The create-project-modular.sh script has been transformed into an intelligent deployment system that supports both from-scratch infrastructure creation and zero-downtime incremental deployment.
 
 #### Deployment Intelligence
 ```bash
@@ -99,7 +99,7 @@ The script supports comprehensive configuration options for both development and
 **1. From-Scratch Deployment** ✅
 ```bash
 # Creates complete infrastructure when no proxy exists
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
   --domain my-first-app.local \
@@ -117,7 +117,7 @@ The script supports comprehensive configuration options for both development and
 **2. Incremental Deployment** ✅ **NEW**
 ```bash
 # Adds projects to existing ecosystem without disruption
-./scripts/create-project.sh \
+./scripts/create-project-modular.sh \
   --name second-app \
   --port 8091 \
   --domain second-app.local \
