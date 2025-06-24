@@ -27,4 +27,5 @@
 # Keep this directory but ignore all project contents
 *
 !.gitignore
+!.gitkeep
 !README.md 

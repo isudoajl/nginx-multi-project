@@ -1,0 +1,23 @@
+# Proxy SSL Certificates - NEVER commit
+# These are runtime certificates generated during deployment
+
+# All certificate files
+*.pem
+*.key
+*.crt
+*.csr
+*.cnf
+
+# Certificate directories (domain-specific)
+*/
+
+# Fallback certificates
+fallback*
+
+# OpenSSL configurations
+openssl.cnf
+
+# Keep this directory structure but ignore all certificate content
+*
+!.gitignore
+!.gitkeep 

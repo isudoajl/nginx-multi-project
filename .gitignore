@@ -24,17 +24,21 @@ ca-key.pem
 openssl.cnf
 *.cnf
 
-# Certificate directories
-certs/*/
-proxy/certs/*/
-**/certs/
+# Certificate directories (ignore contents but allow directory structure)
+certs/*
+!certs/.gitkeep
+!certs/.gitignore
+proxy/certs/*
+!proxy/certs/.gitkeep
+!proxy/certs/.gitignore
 
 # ========================================
 # 🏗️ PROJECT DEPLOYMENT ARTIFACTS
 # ========================================
 
 # Deployed projects (runtime instances)
-projects/*/
+projects/*
+!projects/.gitkeep
 !projects/.gitignore
 !projects/README.md
 
@@ -184,9 +188,6 @@ id_ed25519.pub
 *.key
 *.crt
 *.cert
-certs/
-*/certs/
-**/certs/
 
 # Container logs
 logs/
@@ -197,7 +198,6 @@ logs/
 # Project-specific generated files
 projects/*/certs/
 projects/*/logs/
-proxy/certs/
 proxy/logs/
 
 # Temporary files

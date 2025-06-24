@@ -1,0 +1,38 @@
+# SSL/TLS Certificates - NEVER commit private keys or certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.cer
+*.cert
+*.ca-bundle
+
+# OpenSSL configuration files
+openssl.cnf
+
+# Certificate signing requests
+*.csr
+
+# Certificate authority files
+ca/
+ca-key.pem
+ca-cert.pem
+
+# Let's Encrypt certificates
+fullchain.pem
+privkey.pem
+cert.pem
+chain.pem
+
+# All certificate files
+**/cert*
+**/key*
+**/ssl*
+**/tls*
+
+# Keep this directory but ignore all contents except structure files
+*
+!.gitignore
+!.gitkeep 
