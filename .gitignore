@@ -59,3 +59,30 @@ build/
 dist/
 target/
 
+
+# Production cleanup additions
+**/temp/
+**/tmp/
+**/.DS_Store
+**/*.backup.*
+**/*.bak
+**/*.tmp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Build artifacts
+build/
+dist/
+target/
+
