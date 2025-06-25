@@ -74,23 +74,18 @@ The script supports comprehensive configuration options for both development and
 3. **Domain Name** (`--domain`, `-d`)
    - **Validation**: Valid FQDN format
    - **Required**: Yes
-   - **Example**: `my-app.local` (dev), `my-app.com` (prod)
+   - **Example**: `my-app.com`
 
 4. **Environment Type** (`--env`, `-e`)
-   - **Options**: DEV or PRO
-   - **Default**: DEV
-   - **Features**: Automatic environment-specific configuration
+   - **Required**: Yes  
+   - **Options**: PRO only
+   - **Default**: PRO
+   - **Features**: Production environment-specific configuration
 
 5. **SSL Certificate Paths** (`--cert`, `-c` and `--key`, `-k`)
-   - **Optional**: Auto-generated if not specified
-   - **Development**: Self-signed certificates
-   - **Production**: Custom certificate support
-
-6. **Cloudflare Integration** (PRO environment)
-   - **API Token** (`--cf-token`)
-   - **Account ID** (`--cf-account`)
-   - **Zone ID** (`--cf-zone`)
-   - **Features**: Automatic DNS and WAF configuration
+   - **Optional**: Uses hardcoded cert.pem and cert-key.pem from certs/ directory
+   - **Production**: Uses certificates from certs/ directory
+   - **Required**: Certificates must be placed in certs/ directory before deployment
 
 ### Enhanced Script Flow
 
@@ -99,37 +94,40 @@ The script supports comprehensive configuration options for both development and
 **1. From-Scratch Deployment** ✅
 ```bash
 # Creates complete infrastructure when no proxy exists
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
-  --domain my-first-app.local \
-  --env DEV
+  --domain my-first-app.com \
+  --env PRO
 
 # Execution Flow:
 1. Environment validation (Nix, container engine)
-2. Complete proxy infrastructure creation
-3. Project container deployment
-4. Network setup and integration
-5. SSL certificate generation
+2. SSL certificate validation (certs/cert.pem and certs/cert-key.pem)
+3. Complete proxy infrastructure creation
+4. Project container deployment
+5. Network setup and integration
 6. Comprehensive health verification
 ```
 
 **2. Incremental Deployment** ✅ **NEW**
 ```bash
 # Adds projects to existing ecosystem without disruption
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name second-app \
   --port 8091 \
-  --domain second-app.local \
-  --env DEV
+  --domain second-app.com \
+  --env PRO
 
 # Execution Flow:
 1. Intelligent proxy detection
-2. Ecosystem preservation validation
-3. Project container deployment
-4. Network integration with proxy
-5. Hot configuration update
-6. Zero-downtime verification
+2. SSL certificate validation
+3. Ecosystem preservation validation
+4. Project container deployment
+5. Network integration with proxy
+6. Hot configuration update
+7. Zero-downtime verification
 ```
 
 ### Implementation Details
@@ -215,7 +213,7 @@ function verify_deployment() {
   verify_internal_connectivity
   verify_external_routing
   
-  # SSL/TLS Validation
+ # SSL/TLS Validation
   verify_ssl_configuration
   
   # Existing Project Preservation (Incremental Only)
@@ -257,7 +255,7 @@ Enhanced proxy configuration management with hot reload capabilities:
 ./scripts/update-proxy.sh --action reload
 
 # Add project domain configuration
-./scripts/update-proxy.sh --action add --name my-app --domain my-app.local
+./scripts/update-proxy.sh --action add --name my-app --domain my-app.com
 
 # Remove project configuration
 ./scripts/update-proxy.sh --action remove --name my-app
@@ -285,10 +283,7 @@ Enhanced certificate generation with automatic renewal and validation:
 
 ```bash
 # Generate certificates with automatic configuration
-./scripts/generate-certs.sh --domain my-app.local --env DEV
-
-# Production certificate management
-./scripts/generate-certs.sh --domain my-app.com --env PRO --cloudflare
+./scripts/generate-certs.sh --domain my-app.com --env PRO
 ```
 
 #### Certificate Intelligence
@@ -323,20 +318,46 @@ Complete proxy lifecycle management with advanced operations:
 ./scripts/manage-proxy.sh --action restore --backup-file proxy-backup.tar.gz
 ```
 
-### `dev-environment.sh` - Development Environment Automation
+### `fresh-restart.sh` - Complete Environment Reset ✅ **NEW**
 
-Enhanced development environment setup with automatic configuration:
+Nuclear option for complete environment cleanup and testing:
 
 ```bash
-# Complete development environment setup
-./scripts/dev-environment.sh --setup
+# Clean all containers, networks, and configurations
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/fresh-restart.sh
 
-# Hot reload development changes
-./scripts/dev-environment.sh --reload
-
-# Development environment cleanup
-./scripts/dev-environment.sh --cleanup
+# Interactive confirmation required - this is irreversible
+# Preserves master SSL certificates in certs/ directory
 ```
+
+#### Fresh Restart Capabilities
+```bash
+function fresh_restart() {
+  # Complete environment cleanup
+  stop_all_containers
+  remove_all_containers
+  prune_custom_images
+  clean_networks
+  delete_project_directories
+  clean_configuration_files
+  preserve_master_certificates
+  
+  log "Environment reset complete - ready for fresh deployments"
+}
+```
+
+**Use Cases:**
+- Testing fresh deployment scenarios
+- Cleaning up development experiments
+- Preparing clean environment for testing
+- Troubleshooting deployment issues
+
+**Safety Features:**
+- Interactive confirmation required
+- Preserves essential SSL certificates
+- Comprehensive logging of all operations
+- Graceful container shutdown with timeout
 
 ## Advanced Script Features
 
@@ -463,7 +484,6 @@ function validate_security_configuration() {
 - [ ] SSL certificates properly configured and valid
 - [ ] Security headers active and properly configured
 - [ ] Network isolation functional between projects
-- [ ] Cloudflare integration active (production)
 - [ ] Access logging enabled and configured
 - [ ] Firewall rules properly configured
 

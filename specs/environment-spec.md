@@ -1,14 +1,14 @@
 # Environment Management Specification
 
 ## Overview
-This document specifies the comprehensive environment management system for the **Microservices Nginx Architecture** - covering the Nix development environment, environment switching capabilities, and development/production environment configuration. The system ensures consistent, reproducible environments across all deployment scenarios.
+This document specifies the comprehensive environment management system for the **Microservices Nginx Architecture** - covering the Nix development environment and production environment configuration. The system ensures consistent, reproducible environments for production deployment scenarios.
 
 ## 🎯 Environment Management Status: ✅ **PRODUCTION READY**
 
 The environment management system provides:
 - **✅ Nix Development Environment**: Reproducible development setup with all required tools
-- **✅ Environment Switching**: Seamless transition between development and production environments
-- **✅ Configuration Management**: Environment-specific configuration handling
+- **✅ Production Environment**: Enterprise-grade production deployment
+- **✅ SSL Certificate Management**: Hardcoded certificate handling (cert.pem and cert-key.pem)
 - **✅ Dependency Management**: Automatic tool and dependency provisioning
 - **✅ Environment Validation**: Comprehensive environment verification and setup
 
@@ -22,19 +22,12 @@ The environment management system provides:
 - **Shell Integration**: Seamless integration with development workflow
 - **Dependency Isolation**: Isolated environment preventing system conflicts
 
-#### 2. **Development Environment (DEV)** ✅
-- **Local Development**: Optimized for local development and testing
-- **Self-Signed Certificates**: Automatic generation of development SSL certificates
-- **Local DNS**: Host file management for local domain resolution
-- **Hot Reload**: Live configuration reloading for rapid development
-- **Debug Configuration**: Debug-level logging and development optimizations
-
-#### 3. **Production Environment (PRO)** ✅
+#### 2. **Production Environment (PRO)** ✅
 - **Production Deployment**: Optimized for production workloads
-- **Real Certificates**: Support for production SSL certificates
-- **Cloudflare Integration**: CDN and security service integration
+- **SSL Certificates**: Uses hardcoded cert.pem and cert-key.pem from certs/ directory
 - **Performance Optimization**: Production-grade performance tuning
 - **Security Hardening**: Enhanced security configuration
+- **Domain Configuration**: Production domain routing with SSL termination
 
 ### Environment Configuration Structure
 
@@ -42,24 +35,31 @@ The environment management system provides:
 nginx/
 ├── config/
 │   └── environments/
-│       ├── development/
-│       │   ├── env.conf              # Development environment configuration
-│       │   └── nginx.conf            # Development nginx configuration
 │       └── production/
 │           ├── env.conf              # Production environment configuration
 │           └── nginx.conf            # Production nginx configuration
 ├── scripts/
-│   ├── dev/
-│   │   └── dev-workflow.sh           # Development workflow automation
 │   └── prod/
 │       ├── prod-deployment.sh        # Production deployment automation
 │       ├── cert-management.sh        # Production certificate management
 │       └── cert-rotation.sh          # Certificate rotation automation
 └── tests/
-    ├── test-dev-environment.sh       # Development environment testing
-    ├── test-env-switching.sh         # Environment switching testing
+    ├── test-prod-deployment.sh       # Production deployment testing
     ├── test-env-security.sh          # Environment security testing
     └── test-config-consistency.sh    # Configuration consistency testing
+```
+
+### 🔐 SSL Certificate Requirements (CRITICAL)
+
+**Before any deployment, you MUST place SSL certificates in the `certs/` directory:**
+
+```bash
+# Required certificate files (names are hardcoded):
+certs/cert.pem        # SSL certificate
+certs/cert-key.pem    # SSL private key
+
+# These certificates will be used for ALL projects
+# Make sure they are valid for your domains
 ```
 
 ## Nix Environment Implementation

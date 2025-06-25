@@ -1,7 +1,11 @@
 # Cloudflare Integration Specification
 
+> ⚠️ **DEPRECATED**: This specification is no longer valid. Cloudflare integration has been removed from the system. The architecture now focuses on production-ready deployment without external CDN dependencies. For current specifications, see [SPECS.md](SPECS.md).
+
 ## Overview
 This document specifies the integration between the Nginx microservices architecture and Cloudflare's CDN and security services. The integration is designed for production environments to enhance security, performance, and reliability.
+
+**Status: DEPRECATED as of 2025-06-23**
 
 ## Core Functionality
 

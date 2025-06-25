@@ -52,7 +52,6 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 | **Nginx** | Web server & proxy | ✅ Active | Comprehensive |
 | **Docker Compose** | Container orchestration format | ✅ Active | Complete |
 | **OpenSSL** | SSL/TLS certificate management | ✅ Active | Complete |
-| **Cloudflare** | CDN & security (production) | ✅ Active | Complete |
 | **Bash** | Automation scripting | ✅ Active | Complete |
 
 ### **📋 Documentation Quality Status**
@@ -61,9 +60,10 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 - All Nix development environment references
 - Podman commands and workflows  
 - Container orchestration with docker-compose files
-- SSL/TLS certificate management
+- SSL/TLS certificate management (hardcoded cert.pem and cert-key.pem)
 - Production deployment procedures
 - Incremental deployment system
+- Fresh environment reset capabilities
 
 #### ⚠️ **Mixed References (Acceptable)**
 - Docker vs Podman commands (scripts support both)
@@ -80,12 +80,10 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 - [Architecture Specifications](../specs/SPECS.md) - Complete technical specifications
 - [Nginx Proxy Spec](../specs/nginx-proxy-spec.md) - Proxy component specification
 - [Project Container Spec](../specs/project-container-spec.md) - Container specification
-- [Cloudflare Integration Spec](../specs/cloudflare-spec.md) - CDN integration
 - [Script Automation Spec](../specs/script-spec.md) - Automation specifications
 
 ### **📊 Implementation Tracking**
 - [Implementation Status](../IMPLEMENTATION_STATUS.md) - Comprehensive milestone tracking
-- [Project Structure Analysis](../PROJECT_STRUCTURE_ANALYSIS.md) - Structure analysis
 
 ## 🎯 Quick Navigation
 
@@ -97,6 +95,7 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 - **🌐 Deploy to production** → [production-port-forwarding.md](production-port-forwarding.md)
 - **📜 Automate with scripts** → [script-api-reference.md](script-api-reference.md)
 - **⚙️ Configure system ports** → [unprivileged-ports-setup.md](unprivileged-ports-setup.md)
+- **🧹 Reset environment** → [fresh-restart.sh script](../scripts/fresh-restart.sh) for clean testing
 
 ## 🏆 Documentation Standards
 

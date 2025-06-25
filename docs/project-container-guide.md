@@ -11,8 +11,21 @@ This guide provides comprehensive documentation for working with project contain
 Before working with project containers, ensure you have:
 
 1. A properly configured Nix development environment
-2. Docker or Podman installed
+2. Podman (automatically provided via Nix)
 3. Access to the project repository
+
+### 🔐 SSL Certificate Requirements (CRITICAL)
+
+**Before creating any project, you MUST place SSL certificates in the `certs/` directory:**
+
+```bash
+# Required certificate files (names are hardcoded):
+certs/cert.pem        # SSL certificate
+certs/cert-key.pem    # SSL private key
+
+# These certificates will be used for ALL projects
+# Make sure they are valid for your domains
+```
 
 ### Quick Start
 
@@ -20,10 +33,11 @@ To create a new project container:
 
 ```bash
 # Enter Nix environment
-nix develop
+nix --extra-experimental-features "nix-command flakes" develop
 
 # Create a new project
-./scripts/create-project-modular.sh --name my-project --domain my-project.com --port 8080
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh --name my-project --domain my-project.com --port 8090 --env PRO
 ```
 
 ## Project Container Architecture
@@ -31,7 +45,7 @@ nix develop
 Each project container consists of:
 
 1. **Nginx Configuration**: Custom settings for the specific project
-2. **Docker Setup**: Container definition and networking
+2. **Container Setup**: Container definition and networking
 3. **Static Content**: Website files and assets
 4. **Health Checks**: Monitoring endpoints
 
@@ -40,7 +54,8 @@ Each project container consists of:
 ### Basic Usage
 
 ```bash
-./scripts/create-project-modular.sh --name PROJECT_NAME --domain DOMAIN_NAME --port PORT
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh --name PROJECT_NAME --domain DOMAIN_NAME --port PORT --env PRO
 ```
 
 ### Required Parameters
@@ -49,7 +64,8 @@ Each project container consists of:
 |-----------|-------------|---------|
 | `--name`, `-n` | Project name (alphanumeric with hyphens) | `--name my-project` |
 | `--domain`, `-d` | Domain name for the project | `--domain example.com` |
-| `--port`, `-p` | Internal container port | `--port 8080` |
+| `--port`, `-p` | Internal container port (avoid 8080/8443) | `--port 8090` |
+| `--env`, `-e` | Environment (PRO only) | `--env PRO` |
 
 ### Optional Parameters
 
@@ -58,17 +74,77 @@ Each project container consists of:
 | `--frontend`, `-f` | Path to static files | `./projects/{project_name}/html` | `--frontend /path/to/files` |
 | `--cert`, `-c` | SSL certificate path | `/etc/ssl/certs/cert.pem` | `--cert /path/to/cert.pem` |
 | `--key`, `-k` | SSL private key path | `/etc/ssl/certs/private/cert-key.pem` | `--key /path/to/key.pem` |
-| `--env`, `-e` | Environment (DEV or PRO) | `DEV` | `--env PRO` |
 
 ### Examples
 
 ```bash
-# Create a basic development project
-./scripts/create-project-modular.sh --name blog --domain blog.example.com --port 8080
+# Create a basic production project
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh --name blog --domain blog.example.com --port 8090 --env PRO
 
 # Create a production project with custom frontend
-./scripts/create-project-modular.sh --name shop --domain shop.example.com --port 8081 --env PRO --frontend /path/to/shop/dist
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh --name shop --domain shop.example.com --port 8091 --env PRO --frontend /path/to/shop/dist
 ```
+
+## 🧹 Fresh Environment Reset
+
+For testing purposes or when you need a completely clean environment:
+
+```bash
+# Clean all containers, networks, and configurations
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/fresh-restart.sh
+
+# This script will:
+# • Stop and remove ALL podman containers
+# • Remove ALL custom images (keeps base nginx:alpine)
+# • Prune ALL networks
+# • Delete ALL project directories
+# • Clean ALL configuration files
+# • Preserve master SSL certificates in certs/
+```
+
+This allows you to test fresh deployments without deleting the repository! 🎯
+
+## Project Structure
+
+After creation, your project will have the following structure:
+
+```
+projects/
+└── {project-name}/
+    ├── docker-compose.yml          # Container configuration
+    ├── Dockerfile                  # Custom nginx image
+    ├── nginx.conf                  # Project nginx config
+    ├── conf.d/                     # Additional configurations
+    │   ├── security.conf
+    │   └── compression.conf
+    ├── html/                       # Frontend files
+    │   └── index.html
+    └── certs/                      # SSL certificates
+        ├── cert.pem
+        └── cert-key.pem
+```
+
+## Configuration Options
+
+### Nginx Configuration
+
+The project's `nginx.conf` can be customized for specific needs:
+
+- **Security Settings**: Located in `conf.d/security.conf`
+- **Compression Settings**: Located in `conf.d/compression.conf`
+- **Static File Handling**: Configured in the main `nginx.conf`
+
+### Container Configuration
+
+The `docker-compose.yml` file defines:
+
+- Container settings
+- Volume mounts
+- Network configuration
+- Environment variables
 
 ## Development Environment
 
@@ -128,46 +204,6 @@ sudo ./scripts/update-hosts.sh --domain PROJECT_DOMAIN --action remove
 ```bash
 ./scripts/generate-certs.sh --domain PROJECT_DOMAIN --output ./projects/PROJECT_NAME/certs --env PRO
 ```
-
-## Project Structure
-
-After creation, your project will have the following structure:
-
-```
-projects/
-└── {project-name}/
-    ├── docker-compose.yml          # Container configuration
-    ├── docker-compose.override.yml # Development overrides (DEV only)
-    ├── Dockerfile                  # Custom nginx image
-    ├── nginx.conf                  # Project nginx config
-    ├── conf.d/                     # Additional configurations
-    │   ├── security.conf
-    │   └── compression.conf
-    ├── html/                       # Frontend files
-    │   └── index.html
-    └── certs/                      # SSL certificates
-        ├── cert.pem
-        └── cert-key.pem
-```
-
-## Configuration Options
-
-### Nginx Configuration
-
-The project's `nginx.conf` can be customized for specific needs:
-
-- **Security Settings**: Located in `conf.d/security.conf`
-- **Compression Settings**: Located in `conf.d/compression.conf`
-- **Static File Handling**: Configured in the main `nginx.conf`
-
-### Docker Configuration
-
-The `docker-compose.yml` file defines:
-
-- Container settings
-- Volume mounts
-- Network configuration
-- Environment variables
 
 ## Troubleshooting
 

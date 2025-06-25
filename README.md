@@ -7,7 +7,7 @@ A complete, enterprise-grade container orchestration system that transforms mono
 ## 🚀 Key Achievements
 - **✅ Complete Infrastructure**: Central proxy + isolated project containers
 - **✅ Zero-Downtime Operations**: Incremental project addition without service disruption
-- **✅ Enterprise Security**: SSL/TLS, Cloudflare, comprehensive security headers
+- **✅ Enterprise Security**: SSL/TLS, comprehensive security headers
 - **✅ Battle-Tested**: 20+ concurrent projects, 99.9% uptime validated
 - **✅ Developer-Friendly**: Single-command deployment with full automation
 
@@ -21,43 +21,88 @@ A complete, enterprise-grade container orchestration system that transforms mono
 ## 🚀 Quick Start
 
 ### Prerequisites
-```bash
-# Enter Nix development environment (REQUIRED)
-nix develop
 
-# Verify environment
-echo $IN_NIX_SHELL  # Should return 1
+**You only need to install Nix - all other tools are automatically provided!**
+
+1. **Install Nix** (Development Environment)
+   ```bash
+   # Install Nix - follow official guide:
+   # https://nixos.org/download/
+   
+   # Quick install (single-user):
+   sh <(curl -L https://nixos.org/nix/install) --no-daemon
+   ```
+
+2. **Enter Nix Development Environment** (REQUIRED)
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop
+   
+   # Verify environment is active
+   echo $IN_NIX_SHELL  # Should return 1
+   
+   # All tools are now available: podman, nginx, openssl, docker
+   podman --version  # Verify podman is available
+   ```
+
+### 🔐 SSL Certificate Requirements (CRITICAL)
+
+**Before creating any project, you MUST place SSL certificates in the `certs/` directory:**
+
+```bash
+# Required certificate files (names are hardcoded):
+certs/cert.pem        # SSL certificate
+certs/cert-key.pem    # SSL private key
+
+# These certificates will be used for all projects
+# Make sure they are valid for your domains
 ```
 
 ### Create Your First Project
-```bash
-# Development environment with local SSL & DNS
-./scripts/create-project-modular.sh \
-  --name my-app \
-  --port 8090 \
-  --domain my-app.local \
-  --env DEV
 
-# Production environment with Cloudflare
+> ⚠️ **CRITICAL**: Ports **8080** (HTTP) and **8443** (HTTPS) are **reserved for the nginx proxy**. Use different ports for your projects.
+
+> 🌐 **IMPORTANT**: Before deployment, ensure your domain's DNS records (A/CNAME) are pointing to your server. If using Cloudflare, set SSL/TLS to **"Full"** in the dashboard.
+
+```bash
+# Production environment deployment
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name my-app \
   --port 8090 \
-  --domain my-app.com \
-  --env PRO \
-  --cf-token $CF_TOKEN \
-  --cf-account $CF_ACCOUNT \
-  --cf-zone $CF_ZONE
+  --domain myapp.com \
+  --env PRO
 ```
 
 ### Add More Projects (Zero-Downtime)
 ```bash
 # Incremental deployment - existing projects remain untouched
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name second-app \
   --port 8091 \
-  --domain second-app.local \
-  --env DEV
+  --domain second-app.com \
+  --env PRO
 ```
+
+### 🧹 Fresh Environment Reset
+
+For testing purposes or when you need a completely clean environment:
+
+```bash
+# Clean all containers, networks, and configurations
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/fresh-restart.sh
+
+# This script will:
+# • Stop and remove ALL podman containers
+# • Remove ALL custom images (keeps base nginx:alpine)
+# • Prune ALL networks
+# • Delete ALL project directories
+# • Clean ALL configuration files
+# • Preserve master SSL certificates in certs/
+```
+
+This avoids having to delete and re-clone the repository for fresh testing! 🎯
 
 ## 🏗️ Architecture Overview
 
@@ -106,19 +151,13 @@ echo $IN_NIX_SHELL  # Should return 1
 
 ## 🎯 Use Cases
 
-### **Development Environment**
-Perfect for local development with automatic SSL and DNS configuration
-- Self-signed certificates
-- Local host file management  
-- Hot reload functionality
-- Development-optimized settings
-
 ### **Production Environment**
-Enterprise-ready with Cloudflare integration
+Enterprise-ready with comprehensive security
 - Production SSL certificates
-- CDN and DDoS protection
-- WAF rules and rate limiting
+- Advanced security headers
+- Rate limiting and DDoS protection
 - Performance optimization
+- Domain-based routing with SSL termination
 
 ### **Enterprise Scaling**
 Supports unlimited concurrent projects
@@ -126,6 +165,14 @@ Supports unlimited concurrent projects
 - Resource allocation management
 - Load balancing capabilities
 - Monitoring and observability
+- Zero-downtime incremental deployment
+
+### **Testing & Development**
+Clean environment management for rapid testing
+- Fresh environment reset with `fresh-restart.sh`
+- Preserve certificate configuration
+- Rapid deployment cycles
+- Complete project isolation
 
 ## 🔒 Security Features
 
@@ -133,7 +180,7 @@ Supports unlimited concurrent projects
 - **Security Headers**: HSTS, CSP, X-Frame-Options, and more
 - **Network Isolation**: Projects cannot communicate directly
 - **DDoS Protection**: Rate limiting and connection limits
-- **Cloudflare Integration**: Enterprise CDN and security
+- **Bad Bot Blocking**: Comprehensive malicious bot detection
 
 ## 🛠️ Technology Stack
 
@@ -141,7 +188,6 @@ Supports unlimited concurrent projects
 - **Web Server**: Nginx (latest) with custom configurations
 - **Development Environment**: Nix with flakes support
 - **SSL/TLS**: OpenSSL with automatic certificate management
-- **Production CDN**: Cloudflare with Terraform automation
 - **Orchestration**: Docker Compose with custom networking
 
 ## 🎖️ Implementation Status
@@ -192,6 +238,8 @@ The Microservices Nginx Architecture delivers enterprise-grade container orchest
 
 **Get started now:** [Complete Deployment Guide](docs/deployment-guide.md) 🚀 
 
+## Legacy Documentation
+
 # Nginx Multi-Project Architecture
 
 A robust solution for managing multiple Nginx-based projects with a centralized proxy, container isolation, and automated deployment.
@@ -230,17 +278,13 @@ A robust solution for managing multiple Nginx-based projects with a centralized 
 
 3. Create your first project:
    ```
-   ./scripts/create-project-modular.sh --name my-project --domain example.local --port 8080
-   ```
-   
-   Or use the modular version:
-   ```
-   ./scripts/create-project-modular.sh --name my-project --domain example.local --port 8080
+   nix --extra-experimental-features "nix-command flakes" develop --command \
+   ./scripts/create-project-modular.sh --name my-project --domain example.com --port 8090 --env PRO
    ```
 
 4. Access your project:
-   - Development: http://example.local (after adding to your hosts file)
-   - Direct access: http://localhost:8080
+   - Production: https://example.com (via proxy on port 8443)
+   - Direct access: http://localhost:8090
 
 ## Project Structure
 
@@ -263,17 +307,15 @@ nginx-multi-project/
 │   │   ├── main.sh       # Main script
 │   │   └── modules/      # Script modules
 │   ├── create-project-modular.sh         # Original project creation script
-│   ├── create-project-modular.sh # Modular project creation script
 │   └── [other scripts]
 └── tests/                # Test scripts
 ```
 
 ## Script Architecture
 
-The project includes both the original monolithic script and a refactored modular version:
+The project includes a modular script architecture:
 
-- **create-project-modular.sh**: Original monolithic script
-- **create-project-modular.sh**: Refactored modular version with the same functionality
+- **create-project-modular.sh**: Main project creation script
 
 ### Modular Structure
 

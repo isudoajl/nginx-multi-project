@@ -24,13 +24,26 @@ Zero-downtime addition to existing ecosystems
 ### Environment Setup
 ```bash
 # 1. Enter Nix development environment (REQUIRED)
-nix develop
+nix --extra-experimental-features "nix-command flakes" develop
 
 # 2. Verify Nix environment is active
 echo $IN_NIX_SHELL  # Should return 1
 
 # 3. Verify container engine availability
 podman --version  # or docker --version
+```
+
+### 🔐 SSL Certificate Requirements (CRITICAL)
+
+**Before creating any project, you MUST place SSL certificates in the `certs/` directory:**
+
+```bash
+# Required certificate files (names are hardcoded):
+certs/cert.pem        # SSL certificate
+certs/cert-key.pem    # SSL private key
+
+# These certificates will be used for ALL projects
+# Make sure they are valid for your domains
 ```
 
 ### System Requirements
@@ -44,17 +57,11 @@ podman --version  # or docker --version
 
 ### Creating Your First Project
 
-**Development Environment (Local SSL + DNS)**
-```bash
-./scripts/create-project-modular.sh \
-  --name my-first-app \
-  --port 8090 \
-  --domain my-first-app.local \
-  --env DEV
-```
+> 🌐 **IMPORTANT**: Before deployment, ensure your domain's DNS records (A/CNAME) are pointing to your server.
 
 **Production Environment**
 ```bash
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
@@ -67,7 +74,7 @@ podman --version  # or docker --version
 1. **Proxy Infrastructure Creation**
    - Creates nginx-proxy container with SSL termination
    - Sets up nginx-proxy-network for inter-container communication
-   - Configures default SSL certificates and security headers
+   - Configures SSL certificates from `certs/` directory and security headers
 
 2. **Project Container Deployment**
    - Builds custom nginx image with project configuration
@@ -101,11 +108,12 @@ The incremental deployment system intelligently detects your existing proxy and 
 
 ```bash
 # Add second project to existing ecosystem
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name second-app \
   --port 8091 \
-  --domain second-app.local \
-  --env DEV
+  --domain second-app.com \
+  --env PRO
 ```
 
 ### Incremental Deployment Intelligence
@@ -164,6 +172,26 @@ net2345678    my-first-app-net    bridge
 net3456789    second-app-net      bridge
 ```
 
+## 🧹 Fresh Environment Reset
+
+For testing purposes or when you need a completely clean environment:
+
+```bash
+# Clean all containers, networks, and configurations
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/fresh-restart.sh
+
+# This script will:
+# • Stop and remove ALL podman containers
+# • Remove ALL custom images (keeps base nginx:alpine)
+# • Prune ALL networks
+# • Delete ALL project directories
+# • Clean ALL configuration files
+# • Preserve master SSL certificates in certs/
+```
+
+This avoids having to delete and re-clone the repository for fresh testing! 🎯
+
 ## Advanced Deployment Scenarios
 
 ### Multi-Project Batch Deployment
@@ -173,11 +201,12 @@ Deploy multiple projects efficiently:
 ```bash
 # Deploy multiple projects in sequence
 for project in app1 app2 app3; do
+  nix --extra-experimental-features "nix-command flakes" develop --command \
   ./scripts/create-project-modular.sh \
     --name $project \
     --port $((8090 + $RANDOM % 100)) \
-    --domain $project.local \
-    --env DEV
+    --domain $project.com \
+    --env PRO
 done
 ```
 
@@ -185,24 +214,12 @@ done
 
 ```bash
 # Production deployment
+nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name production-app \
   --port 8092 \
   --domain myapp.com \
   --env PRO
-```
-
-### Custom SSL Certificate Deployment
-
-```bash
-# Deploy with custom SSL certificates
-./scripts/create-project-modular.sh \
-  --name secure-app \
-  --port 8093 \
-  --domain secure-app.com \
-  --env DEV \
-  --cert /path/to/certificate.pem \
-  --key /path/to/private-key.pem
 ```
 
 ## Deployment Verification
