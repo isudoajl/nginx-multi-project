@@ -87,7 +87,7 @@ services:
 
 networks:
   ${PROJECT_NAME}-network:
-    driver: bridge
+    external: true
 EOF
 }
 

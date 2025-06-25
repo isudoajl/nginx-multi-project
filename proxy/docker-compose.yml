@@ -25,5 +25,5 @@ services:
 
 networks:
   nginx-proxy-network:
-    driver: bridge
+    external: true
   # Project networks will be added dynamically 
