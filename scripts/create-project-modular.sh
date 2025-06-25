@@ -21,6 +21,7 @@ log "Starting project creation process..."
 # Source and execute modules in order
 source "${MODULES_DIR}/args.sh"
 source "${MODULES_DIR}/environment.sh"
+source "${MODULES_DIR}/certificate_validation.sh"
 source "${MODULES_DIR}/proxy.sh"
 source "${MODULES_DIR}/project_structure.sh"
 source "${MODULES_DIR}/project_files.sh"
@@ -33,6 +34,9 @@ parse_arguments "$@"
 
 # Validate environment
 validate_environment
+
+# Validate SSL certificates
+validate_certificates
 
 # Check and setup proxy
 check_proxy
