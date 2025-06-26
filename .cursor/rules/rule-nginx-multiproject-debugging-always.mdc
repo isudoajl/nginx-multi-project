@@ -135,6 +135,11 @@ alwaysApply: true
 - **Why it failed:** Domain configuration files from previous sessions reference containers that no longer exist, causing nginx startup failure
 - **Better approach:** Always clean up domain configuration files in proxy/conf.d/domains/ when performing fresh deployments or when containers are removed
 
+❌ **FAILED:** Cloudflare Error 522 (Connection timed out) on production/VPS deployments
+- **Problem:** Cloudflare shows "Error 522: Connection timed out" even though containers are running and accessible on ports 8080/8443
+- **Why it failed:** No port forwarding configured from standard ports 80/443 to container ports 8080/8443, so Cloudflare cannot reach origin server
+- **Better approach:** ALWAYS set up iptables port forwarding rules immediately after deployment: `sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080` and `sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443`
+
 ### Script/Automation Issues
 ❌ **FAILED:** Create-project script failing due to stale domain configurations
 - **Problem:** Enhanced create-project script fails during proxy health check because old domain configs reference non-existent containers

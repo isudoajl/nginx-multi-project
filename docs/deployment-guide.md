@@ -59,6 +59,16 @@ certs/cert-key.pem    # SSL private key
 
 > 🌐 **IMPORTANT**: Before deployment, ensure your domain's DNS records (A/CNAME) are pointing to your server.
 
+> 🔥 **CRITICAL FOR PRODUCTION/VPS**: After deployment, you **MUST** set up port forwarding to avoid Cloudflare Error 522:
+> ```bash
+> # Forward standard ports to container ports (run AFTER deployment)
+> sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+> sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+> 
+> # Make persistent (Ubuntu/Debian):
+> sudo apt install iptables-persistent && sudo netfilter-persistent save
+> ```
+
 **Production Environment**
 ```bash
 nix --extra-experimental-features "nix-command flakes" develop --command \

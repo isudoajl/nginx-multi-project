@@ -538,6 +538,66 @@ If you can access the service on port 8080/8443 but not on 80/443, it's likely a
 
 #### 5.3.4. DNS Resolution Issues
 
+#### 5.3.5. Cloudflare Error 522 (Connection Timed Out)
+
+**Symptoms:**
+- Cloudflare shows "Error 522: Connection timed out" 
+- Website works on ports 8080/8443 but not on standard ports 80/443
+- Direct access to server IP on standard ports fails
+- Cloudflare cannot reach origin server
+
+**Root Cause:**
+Cloudflare expects your origin server to be accessible on standard ports 80/443, but your nginx containers are running on unprivileged ports 8080/8443 without proper port forwarding configured.
+
+**Critical Fix - Set Up Port Forwarding:**
+
+1. **Apply iptables rules to forward traffic:**
+   ```bash
+   # Forward incoming traffic from port 80 to 8080
+   sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+   
+   # Forward incoming traffic from port 443 to 8443  
+   sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+   ```
+
+2. **Verify port forwarding is active:**
+   ```bash
+   # Check that forwarding rules exist
+   sudo iptables -t nat -L PREROUTING | grep -E "(80|443|8080|8443)"
+   
+   # Test that standard ports now work
+   curl -I -H "Host: yourdomain.com" http://localhost:80 --max-time 5
+   ```
+
+3. **Make port forwarding persistent (choose one method):**
+
+   **Method A - Using netfilter-persistent (Ubuntu/Debian):**
+   ```bash
+   sudo apt update && sudo apt install iptables-persistent
+   sudo netfilter-persistent save
+   ```
+   
+   **Method B - Using systemd service:**
+   ```bash
+   # Use the provided production deployment script
+   sudo ./nginx/scripts/prod/prod-deployment.sh --port-forward
+   ```
+
+4. **Verify Cloudflare can now reach your server:**
+   ```bash
+   # Test external access on standard ports
+   curl -I http://YOUR_SERVER_IP:80
+   curl -I https://YOUR_SERVER_IP:443
+   ```
+
+**Additional Checks:**
+- Ensure your firewall (ufw/firewalld) allows ports 80/443
+- Verify your containers are healthy: `podman ps` 
+- Check nginx configuration: `podman exec nginx-proxy nginx -t`
+- Test with proper Host header: `curl -I -H "Host: yourdomain.com" http://localhost:8080`
+
+This issue commonly occurs on VPS/production deployments where containers run on unprivileged ports but external services expect standard ports.
+
 ## Managing the Nginx Proxy
 
 Use the `manage-proxy.sh` script to control the Nginx proxy container:

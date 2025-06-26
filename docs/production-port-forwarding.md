@@ -1,6 +1,26 @@
 # Production Port Configuration
 
+> ⚠️ **CRITICAL**: If you're experiencing **Cloudflare Error 522** (Connection timed out), you likely need to set up port forwarding. This is the **#1 issue** with production/VPS deployments.
+
 In a production environment, it's a security best practice to run containers as non-root users. This means the Nginx proxy container cannot bind directly to privileged ports like 80 (HTTP) and 443 (HTTPS) by default.
+
+## 🔥 Quick Fix for Cloudflare Error 522
+
+If you're getting Cloudflare Error 522, apply this fix immediately:
+
+```bash
+# Forward traffic from standard ports to container ports
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+
+# Make persistent (Ubuntu/Debian):
+sudo apt install iptables-persistent && sudo netfilter-persistent save
+
+# Verify it works:
+curl -I http://YOUR_SERVER_IP:80
+```
+
+This fixes the issue where Cloudflare cannot reach your origin server because it's only listening on ports 8080/8443 instead of standard ports 80/443.
 
 ## Unprivileged Port Range Configuration (CURRENT APPROACH)
 

@@ -63,6 +63,14 @@ certs/cert-key.pem    # SSL private key
 
 > 🌐 **IMPORTANT**: Before deployment, ensure your domain's DNS records (A/CNAME) are pointing to your server. If using Cloudflare, set SSL/TLS to **"Full"** in the dashboard.
 
+> 🔥 **PRODUCTION/VPS REQUIREMENT**: After deployment, you **MUST** set up port forwarding from standard ports 80/443 to container ports 8080/8443:
+> ```bash
+> # Required for production/VPS - allows Cloudflare to reach your server
+> sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+> sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+> ```
+> Without this, you'll get **Cloudflare Error 522** (connection timeouts).
+
 ```bash
 # Production environment deployment
 nix --extra-experimental-features "nix-command flakes" develop --command \
