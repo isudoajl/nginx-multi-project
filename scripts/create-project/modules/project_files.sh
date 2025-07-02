@@ -76,7 +76,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./conf.d:/etc/nginx/conf.d:ro
-      - ./html:/usr/share/nginx/html:ro
+      - ${FRONTEND_MOUNT}:/usr/share/nginx/html:ro
       - ./logs:/var/log/nginx
     restart: unless-stopped
     networks:

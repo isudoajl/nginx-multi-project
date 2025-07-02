@@ -81,6 +81,23 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
   --env PRO
 ```
 
+### Custom Frontend Mount Point
+
+You can specify a custom frontend directory to mount in the container:
+
+```bash
+# Deploy with custom frontend mount point
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name my-app \
+  --port 8090 \
+  --domain myapp.com \
+  --env PRO \
+  --frontend-mount /path/to/your/frontend
+```
+
+This will mount the specified directory as `/usr/share/nginx/html` in the container. If not specified, the default is `./html` in the project directory.
+
 ### Add More Projects (Zero-Downtime)
 ```bash
 # Incremental deployment - existing projects remain untouched
@@ -91,6 +108,24 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
   --domain second-app.com \
   --env PRO
 ```
+
+### Safely Restart Projects
+
+If you need to manually restart a project, use the `restart-project.sh` script to ensure proper proxy connectivity:
+
+```bash
+# Safely restart a project
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/restart-project.sh --name my-app
+```
+
+This script handles:
+- Stopping and restarting the container
+- Reconnecting it to the proxy network
+- Updating the proxy configuration with the new IP address
+- Reloading the proxy configuration
+
+⚠️ **WARNING**: Never use `podman-compose down` and `podman-compose up -d` directly in the project directory, as this breaks the connection to the proxy. Always use the `restart-project.sh` script instead.
 
 ### 🧹 Fresh Environment Reset
 

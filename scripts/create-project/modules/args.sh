@@ -13,6 +13,7 @@ function display_help() {
   echo "  --port, -p PORT          Internal container port (required, 1024-65535)"
   echo "  --domain, -d DOMAIN      Domain name (required, valid FQDN format)"
   echo "  --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)"
+  echo "  --frontend-mount, -m DIR Path to mount as frontend in container (optional, default: ./html)"
   echo "  --cert, -c FILE          Path to SSL certificate (optional)"
   echo "  --key, -k FILE           Path to SSL private key (optional)"
   echo "  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)"
@@ -22,6 +23,7 @@ function display_help() {
   echo "  $0 --name my-project --port 8080 --domain example.com"
   echo "  $0 -n my-project -p 8080 -d example.com -e DEV"
   echo "  $0 -n my-project -p 8080 -d example.com -e PRO"
+  echo "  $0 -n my-project -p 8080 -d example.com -m /path/to/frontend"
 }
 
 # Function: Parse arguments
@@ -30,6 +32,7 @@ function parse_arguments() {
   PROJECT_PORT=""
   DOMAIN_NAME=""
   FRONTEND_DIR=""
+  FRONTEND_MOUNT=""
   CERT_PATH=""
   KEY_PATH=""
   ENV_TYPE="DEV"
@@ -50,6 +53,10 @@ function parse_arguments() {
         ;;
       --frontend|-f)
         FRONTEND_DIR="$2"
+        shift 2
+        ;;
+      --frontend-mount|-m)
+        FRONTEND_MOUNT="$2"
         shift 2
         ;;
       --cert|-c)
@@ -112,6 +119,11 @@ function parse_arguments() {
     FRONTEND_DIR="${PROJECTS_DIR}/${PROJECT_NAME}/html"
   fi
 
+  # Set default frontend mount if not specified
+  if [[ -z "$FRONTEND_MOUNT" ]]; then
+    FRONTEND_MOUNT="./html"
+  fi
+
   # Set default certificate paths if not specified
   if [[ -z "$CERT_PATH" ]]; then
     CERT_PATH="/etc/ssl/certs/cert.pem"
@@ -122,4 +134,5 @@ function parse_arguments() {
   fi
   
   log "Arguments parsed successfully: PROJECT_NAME=$PROJECT_NAME, DOMAIN_NAME=$DOMAIN_NAME, ENV_TYPE=$ENV_TYPE"
+  log "Frontend mount point: $FRONTEND_MOUNT"
 } 

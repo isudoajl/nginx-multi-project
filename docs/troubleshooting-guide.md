@@ -818,6 +818,35 @@ This guide helps you diagnose and fix common issues with the Nginx Multi-Project
    nix --extra-experimental-features "nix-command flakes" develop --command podman network inspect nginx-proxy-network
    ```
 
+4. Use the restart-project.sh script to safely restart the project and reconnect it to the proxy:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command ./scripts/restart-project.sh --name <project-name>
+   ```
+
+#### Project stops working after manual restart
+
+**Symptoms**: Project was working fine, but after manually running `podman-compose down` and `podman-compose up -d` in the project directory, it's no longer accessible through the proxy.
+
+**Possible causes**:
+- Container gets a new IP address but proxy configuration still points to the old IP
+- Container is no longer connected to the proxy network
+- Proxy configuration isn't updated with the new IP address
+
+**Solutions**:
+1. NEVER use `podman-compose down` and `podman-compose up -d` directly in the project directory. Always use the restart-project.sh script:
+   ```bash
+   nix --extra-experimental-features "nix-command flakes" develop --command ./scripts/restart-project.sh --name <project-name>
+   ```
+
+2. If you've already used `podman-compose down` and `podman-compose up -d`, you can fix the issue by:
+   ```bash
+   # Connect the container to the proxy network
+   nix --extra-experimental-features "nix-command flakes" develop --command podman network connect nginx-proxy-network <project-name>
+   
+   # Use the restart script to update the proxy configuration
+   nix --extra-experimental-features "nix-command flakes" develop --command ./scripts/restart-project.sh --name <project-name>
+   ```
+
 ### Script Issues
 
 #### create-project-modular.sh script hangs
