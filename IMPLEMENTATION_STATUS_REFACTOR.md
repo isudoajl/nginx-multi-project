@@ -142,11 +142,11 @@ This document outlines the implementation plan for refactoring the **Nginx Multi
 **Test Results:** All tests passing. Implemented comprehensive test suite for monorepo compatibility with different frontend/backend technologies in test-monorepo-compatibility.sh. Verified support for React, Vue, and Angular frontends with Node.js, Go, and Rust backends in various monorepo structures (standard, workspace, nx, flat, nested).
 
 ### Milestone 7: Documentation and Examples
-**Status: 📝 Planned**
+**Status: ✅ Partially Implemented (2025-07-13)**
 
 1. **Update Documentation**
    - Update README.md with new capabilities
-   - Create example usage documentation
+   - ✅ Create example usage documentation - Implemented in nix-monorepo-guide.md
    - Update troubleshooting guide
    - Create migration guide for existing projects
 

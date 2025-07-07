@@ -18,6 +18,7 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 | **🚨 Troubleshooting** | [troubleshooting-guide.md](troubleshooting-guide.md) | Common issues and debugging procedures | ✅ Current | 2025-06-23 |
 | **🌐 Production Setup** | [production-port-forwarding.md](production-port-forwarding.md) | Production deployment and port configuration | ✅ Current | 2024-07-01 |
 | **🔧 System Setup** | [unprivileged-ports-setup.md](unprivileged-ports-setup.md) | Linux system configuration for port binding | ✅ Current | 2024-07-01 |
+| **🏭 Monorepo Builds** | [nix-monorepo-guide.md](nix-monorepo-guide.md) | Guide for Nix-based monorepo builds | ✅ New | 2025-07-13 |
 
 ## 🎯 Documentation by Use Case
 
@@ -36,10 +37,11 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 2. [production-port-forwarding.md](production-port-forwarding.md) - Production deployment
 3. [unprivileged-ports-setup.md](unprivileged-ports-setup.md) - System configuration
 
-### 🎉 **Latest Features (2025-06-23)**
-- **Incremental Deployment System**: Zero-downtime project addition - See [deployment-guide.md](deployment-guide.md)
-- **Enhanced Troubleshooting**: Advanced debugging procedures - See [troubleshooting-guide.md](troubleshooting-guide.md)
-- **Production-Grade Documentation**: Complete enterprise documentation suite
+### 🎉 **Latest Features**
+- **Nix-Based Monorepo Builds (2025-07-13)**: Deploy projects from monorepos - See [nix-monorepo-guide.md](nix-monorepo-guide.md)
+- **Incremental Deployment System (2025-06-23)**: Zero-downtime project addition - See [deployment-guide.md](deployment-guide.md)
+- **Enhanced Troubleshooting (2025-06-23)**: Advanced debugging procedures - See [troubleshooting-guide.md](troubleshooting-guide.md)
+- **Production-Grade Documentation (2025-06-23)**: Complete enterprise documentation suite
 
 ## 🛠️ Current Tech Stack
 
@@ -90,6 +92,7 @@ Complete, enterprise-grade container orchestration system with revolutionary **z
 ### **I want to...**
 - **🚀 Get started quickly** → [README.md](README.md) → [deployment-guide.md](deployment-guide.md)
 - **👨‍💻 Create a new project** → [project-container-guide.md](project-container-guide.md)
+- **🏭 Deploy from a monorepo** → [nix-monorepo-guide.md](nix-monorepo-guide.md)
 - **🔧 Understand the architecture** → [how-it-works.md](how-it-works.md) → [project-container-architecture.md](project-container-architecture.md)
 - **🚨 Fix an issue** → [troubleshooting-guide.md](troubleshooting-guide.md)
 - **🌐 Deploy to production** → [production-port-forwarding.md](production-port-forwarding.md)
@@ -117,4 +120,4 @@ The **Nginx Multi-Project Architecture** provides enterprise-grade documentation
 
 ---
 
-*Last Updated: 2025-06-23 | Total Documents: 10 | Status: Production Ready ✅* 
+*Last Updated: 2025-07-13 | Total Documents: 11 | Status: Production Ready ✅* 
