@@ -32,7 +32,13 @@ function generate_dockerfile() {
   local project_dir="$1"
   
   log "Creating Dockerfile..."
-  cat > "${project_dir}/Dockerfile" << EOF
+  
+  # Check if using Nix build
+  if [[ "$USE_NIX_BUILD" == true ]]; then
+    generate_nix_dockerfile "$project_dir"
+  else
+    # Standard Dockerfile
+    cat > "${project_dir}/Dockerfile" << EOF
 FROM nginx:alpine
 
 # Install required packages
@@ -57,6 +63,96 @@ EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
 EOF
+  fi
+}
+
+# Function: Generate Nix-compatible Dockerfile
+function generate_nix_dockerfile() {
+  local project_dir="$1"
+  
+  log "Creating Nix-compatible Dockerfile..."
+  
+  cat > "${project_dir}/Dockerfile" << EOF
+# Base image with Nix support
+FROM nixos/nix:latest AS builder
+
+# Copy monorepo
+COPY ${MONO_REPO_PATH} /opt/${PROJECT_NAME}
+WORKDIR /opt/${PROJECT_NAME}
+
+# Detect and use flake.nix
+RUN if [ -f flake.nix ]; then \\
+      nix --extra-experimental-features "nix-command flakes" develop --command bash -c "${FRONTEND_BUILD_CMD}" && \\
+      $([ -n "${BACKEND_PATH}" ] && echo "nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"${BACKEND_BUILD_CMD}\"" || echo "echo \"No backend build required\""); \\
+    else \\
+      echo "Error: flake.nix not found" && exit 1; \\
+    fi
+
+# Final image
+FROM nginx:alpine
+
+# Install required packages
+RUN apk add --no-cache curl $([ -n "${BACKEND_PATH}" ] && echo "supervisor")
+
+# Copy SSL certificates
+COPY --chown=nginx:nginx certs/cert.pem /etc/ssl/certs/cert.pem
+COPY --chown=nginx:nginx certs/cert-key.pem /etc/ssl/private/cert-key.pem
+
+# Copy built frontend
+COPY --from=builder /opt/${PROJECT_NAME}/${FRONTEND_PATH}/${FRONTEND_BUILD_DIR} /tmp/frontend-build
+
+# Create symlink to nginx html directory
+RUN rm -rf /usr/share/nginx/html && \\
+    ln -s /tmp/frontend-build /usr/share/nginx/html
+
+# Copy backend if specified
+$([ -n "${BACKEND_PATH}" ] && echo "# Copy backend\nCOPY --from=builder /opt/${PROJECT_NAME}/${BACKEND_PATH} /opt/backend" || echo "# No backend specified")
+
+# Configure supervisord if backend is specified
+$([ -n "${BACKEND_PATH}" ] && echo "# Configure supervisord\nRUN mkdir -p /etc/supervisor/conf.d" || echo "# No backend specified")
+
+# Create required directories and set permissions
+RUN mkdir -p /etc/nginx/conf.d \\
+    && mkdir -p /var/log/nginx \\
+    && chown -R nginx:nginx /var/log/nginx \\
+    && chmod -R 755 /var/log/nginx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
+  CMD curl -f http://localhost/health || exit 1
+
+EXPOSE 80
+
+# Start command based on whether backend is specified
+$([ -n "${BACKEND_PATH}" ] && echo "CMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor/conf.d/supervisord.conf\"]" || echo "CMD [\"nginx\", \"-g\", \"daemon off;\"]")
+EOF
+
+  # Create supervisord.conf if backend is specified
+  if [ -n "${BACKEND_PATH}" ]; then
+    log "Creating supervisord.conf..."
+    cat > "${project_dir}/supervisord.conf" << EOF
+[supervisord]
+nodaemon=true
+logfile=/var/log/supervisord.log
+logfile_maxbytes=50MB
+logfile_backups=10
+loglevel=info
+
+[program:nginx]
+command=nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/nginx/stdout.log
+stderr_logfile=/var/log/nginx/stderr.log
+
+[program:backend]
+command=bash -c "cd /opt/backend && ${BACKEND_BUILD_CMD}"
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/backend-stdout.log
+stderr_logfile=/var/log/backend-stderr.log
+EOF
+  fi
 }
 
 # Function: Generate docker-compose.yml
@@ -76,8 +172,9 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./conf.d:/etc/nginx/conf.d:ro
-      - ${FRONTEND_MOUNT}:/usr/share/nginx/html:ro
+$([ "$USE_NIX_BUILD" == false ] && echo "      - ${FRONTEND_MOUNT}:/usr/share/nginx/html:ro" || echo "      # No frontend mount needed for Nix build")
       - ./logs:/var/log/nginx
+$([ -n "${BACKEND_PATH}" ] && echo "      - ./supervisord.conf:/etc/supervisor/conf.d/supervisord.conf:ro" || echo "")
     restart: unless-stopped
     networks:
       - ${PROJECT_NAME}-network
@@ -96,8 +193,9 @@ function generate_nginx_conf() {
   local project_dir="$1"
   
   log "Creating nginx.conf..."
-  cat > "${project_dir}/nginx.conf" << EOF
-user nginx;
+  
+  # Base nginx configuration
+  local nginx_conf="user nginx;
 worker_processes auto;
 error_log /var/log/nginx/error.log notice;
 pid /var/run/nginx.pid;
@@ -111,9 +209,9 @@ http {
     default_type application/octet-stream;
     
     # Log format
-    log_format main '\$remote_addr - \$remote_user [\$time_local] "\$request" '
-                    '\$status \$body_bytes_sent "\$http_referer" '
-                    '"\$http_user_agent" "\$http_x_forwarded_for"';
+    log_format main '\$remote_addr - \$remote_user [\$time_local] \"\$request\" '
+                    '\$status \$body_bytes_sent \"\$http_referer\" '
+                    '\"\$http_user_agent\" \"\$http_x_forwarded_for\"';
     
     access_log /var/log/nginx/access.log main;
     
@@ -140,7 +238,28 @@ http {
             add_header Content-Type text/plain;
             return 200 'OK';
         }
-        
+"
+
+  # Add backend proxy if backend is specified
+  if [ -n "${BACKEND_PATH}" ]; then
+    nginx_conf+="
+        # Backend API proxy
+        location /api/ {
+            proxy_pass http://localhost:3000/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host \$host;
+            proxy_cache_bypass \$http_upgrade;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+"
+  fi
+
+  # Add default location and error pages
+  nginx_conf+="        
         # Default location
         location / {
             try_files \$uri \$uri/ =404;
@@ -160,7 +279,10 @@ http {
         }
     }
 }
-EOF
+"
+
+  # Write the nginx.conf file
+  echo "$nginx_conf" > "${project_dir}/nginx.conf"
 }
 
 # Function: Generate configuration files
@@ -235,10 +357,12 @@ EOF
 function generate_html_files() {
   local project_dir="$1"
   
-  log "Creating HTML files..."
-  
-  # Create index.html
-  cat > "${project_dir}/html/index.html" << EOF
+  # Only generate HTML files if not using Nix build
+  if [[ "$USE_NIX_BUILD" == false ]]; then
+    log "Creating HTML files..."
+    
+    # Create index.html
+    cat > "${project_dir}/html/index.html" << EOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,9 +405,9 @@ function generate_html_files() {
 </body>
 </html>
 EOF
-  
-  # Create 404.html
-  cat > "${project_dir}/html/404.html" << EOF
+    
+    # Create 404.html
+    cat > "${project_dir}/html/404.html" << EOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -333,9 +457,9 @@ EOF
 </body>
 </html>
 EOF
-  
-  # Create 50x.html
-  cat > "${project_dir}/html/50x.html" << EOF
+    
+    # Create 50x.html
+    cat > "${project_dir}/html/50x.html" << EOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -386,8 +510,14 @@ EOF
 </body>
 </html>
 EOF
-  
-  # Create health check directory and file
-  mkdir -p "${project_dir}/html/health"
-  echo "OK" > "${project_dir}/html/health/index.html"
+    
+    # Create health check directory and file
+    mkdir -p "${project_dir}/html/health"
+    echo "OK" > "${project_dir}/html/health/index.html"
+  else
+    log "Skipping HTML file generation for Nix build..."
+    
+    # Create health directory for health checks
+    mkdir -p "${project_dir}/html/health"
+  fi
 }
