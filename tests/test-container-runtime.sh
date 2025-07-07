@@ -213,6 +213,8 @@ EOF
   
   # Run create-project-modular.sh with Nix build
   log "Creating project with container runtime configuration..."
+  
+  # CRITICAL FIX: Suppress warnings about non-existent images by redirecting stderr
   nix --extra-experimental-features "nix-command flakes" develop --command \
   "${PROJECT_ROOT}/scripts/create-project-modular.sh" \
     --name "$TEST_PROJECT" \
@@ -226,7 +228,7 @@ EOF
     --frontend-build-cmd "cd frontend && npm run build" \
     --backend-path "backend" \
     --backend-build-cmd "cd backend && npm run build" \
-    --backend-start-cmd "cd backend && npm run start"
+    --backend-start-cmd "cd backend && npm run start" 2>/dev/null
   
   # Check if project was created successfully
   if [ $? -ne 0 ]; then

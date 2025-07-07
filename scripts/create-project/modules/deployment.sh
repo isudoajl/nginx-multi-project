@@ -53,6 +53,12 @@ function deploy_project() {
   if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
     if command -v podman-compose &> /dev/null; then
       log "Using podman-compose to build and start the container..."
+      
+      # CRITICAL FIX: Check if podman-compose is trying to pull non-existent images
+      # Create a local image first to prevent podman from trying to pull from registry
+      log "Building local image first to prevent registry pull attempts..."
+      $CONTAINER_ENGINE build -t "${PROJECT_NAME}" . || handle_error "Failed to build project image"
+      
       # CRITICAL FIX: Use project name flag to ensure consistent container naming
       podman-compose -p "${PROJECT_NAME}" up -d --build || handle_error "Failed to start project with podman-compose"
       
