@@ -17,6 +17,7 @@ function display_help() {
   echo "  --cert, -c FILE          Path to SSL certificate (optional)"
   echo "  --key, -k FILE           Path to SSL private key (optional)"
   echo "  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)"
+  echo "  --env-vars VARS          Environment variables as comma-separated list: VAR1=value1,VAR2=value2"
   echo "  --help, -h               Display this help message"
   echo ""
   echo "Nix-based Build Options:"
@@ -40,7 +41,8 @@ function display_help() {
   echo "     --mono-repo /path/to/repo --frontend-path packages/frontend \\"
   echo "     --frontend-build-dir dist --frontend-build-cmd \"npm run build\" \\"
   echo "     --backend-path packages/backend --backend-build-cmd \"npm run build\" \\"
-  echo "     --backend-start-cmd \"npm start\""
+  echo "     --backend-start-cmd \"npm start\" \\"
+  echo "     --env-vars \"NODE_ENV=production,API_URL=https://api.example.com\""
 }
 
 # Function: Parse arguments
@@ -53,6 +55,7 @@ function parse_arguments() {
   CERT_PATH=""
   KEY_PATH=""
   ENV_TYPE="DEV"
+  PROJECT_ENV_VARS=""
   
   # New Nix-based build parameters
   USE_NIX_BUILD=false
@@ -96,6 +99,10 @@ function parse_arguments() {
         ;;
       --env|-e)
         ENV_TYPE="$2"
+        shift 2
+        ;;
+      --env-vars)
+        PROJECT_ENV_VARS="$2"
         shift 2
         ;;
       --use-nix-build)
@@ -190,6 +197,16 @@ function parse_arguments() {
 
   if [[ -z "$KEY_PATH" ]]; then
     KEY_PATH="/etc/ssl/certs/private/cert-key.pem"
+  fi
+  
+  # Validate environment variables format if specified
+  if [[ -n "$PROJECT_ENV_VARS" ]]; then
+    # Check if format is correct (VAR1=value1,VAR2=value2)
+    if ! [[ "$PROJECT_ENV_VARS" =~ ^([A-Za-z0-9_]+=.+)(,[A-Za-z0-9_]+=.+)*$ ]]; then
+      handle_error "Invalid environment variables format: $PROJECT_ENV_VARS. Use format: VAR1=value1,VAR2=value2"
+    fi
+    
+    log "Environment variables specified: $PROJECT_ENV_VARS"
   fi
   
   # Validate Nix build parameters if enabled

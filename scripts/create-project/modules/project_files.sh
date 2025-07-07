@@ -278,6 +278,22 @@ function generate_docker_compose() {
   
   log "Creating docker-compose.yml..."
   
+  # Process environment variables if specified
+  local env_vars_config=""
+  if [[ -n "${PROJECT_ENV_VARS}" ]]; then
+    log "Processing environment variables..."
+    env_vars_config="      # Custom environment variables\n"
+    
+    # Convert comma-separated list to individual environment variables
+    IFS=',' read -ra ENV_VARS_ARRAY <<< "${PROJECT_ENV_VARS}"
+    for env_var in "${ENV_VARS_ARRAY[@]}"; do
+      env_vars_config+="      - ${env_var}\n"
+    done
+  fi
+  
+  # Create health check configuration
+  local health_check_config="    healthcheck:\n      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost/health/\"]\n      interval: 30s\n      timeout: 10s\n      retries: 3\n      start_period: 10s"
+  
   # For Nix build, we need to add the monorepo as a build context
   if [[ "$USE_NIX_BUILD" == true ]]; then
     cat > "${project_dir}/docker-compose.yml" << EOF
@@ -297,12 +313,16 @@ $([ -n "${BACKEND_PATH}" ] && echo "      - ./supervisord.conf:/etc/supervisor/c
     restart: unless-stopped
     networks:
       - ${PROJECT_NAME}-network
+      # Proxy network will be connected during deployment
     environment:
       - PROJECT_NAME=${PROJECT_NAME}
       - DOMAIN_NAME=${DOMAIN_NAME}
+$([ -n "${env_vars_config}" ] && echo -e "${env_vars_config}" || echo "")
+$([ -n "${health_check_config}" ] && echo -e "${health_check_config}" || echo "")
 
 networks:
   ${PROJECT_NAME}-network:
+    name: ${PROJECT_NAME}-network
     external: true
 EOF
   else
@@ -324,15 +344,21 @@ services:
     restart: unless-stopped
     networks:
       - ${PROJECT_NAME}-network
+      # Proxy network will be connected during deployment
     environment:
       - PROJECT_NAME=${PROJECT_NAME}
       - DOMAIN_NAME=${DOMAIN_NAME}
+$([ -n "${env_vars_config}" ] && echo -e "${env_vars_config}" || echo "")
+$([ -n "${health_check_config}" ] && echo -e "${health_check_config}" || echo "")
 
 networks:
   ${PROJECT_NAME}-network:
+    name: ${PROJECT_NAME}-network
     external: true
 EOF
   fi
+  
+  log "docker-compose.yml created successfully"
 }
 
 # Function: Generate nginx.conf
