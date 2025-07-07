@@ -14,6 +14,11 @@ function deploy_project() {
     handle_error "Project directory '${project_dir}' does not exist"
   fi
   
+  # CRITICAL FIX: Clean up any existing containers with the same name to prevent conflicts
+  log "Cleaning up any existing containers with the same name..."
+  $CONTAINER_ENGINE stop "${PROJECT_NAME}" 2>/dev/null || true
+  $CONTAINER_ENGINE rm "${PROJECT_NAME}" 2>/dev/null || true
+  
   # Create project-specific network
   local project_network="${PROJECT_NAME}-network"
   if ! $CONTAINER_ENGINE network ls --format "{{.Name}}" | grep -q "^${project_network}$"; then
@@ -25,25 +30,133 @@ function deploy_project() {
   log "Building and starting project container..."
   cd "${project_dir}" || handle_error "Failed to change to project directory"
   
+  # If using Nix build, copy the monorepo to the project directory
+  if [[ "$USE_NIX_BUILD" == true ]]; then
+    log "Copying monorepo for Nix build..."
+    
+    # Create a monorepo directory in the project directory
+    local monorepo_dest="${project_dir}/monorepo"
+    mkdir -p "${monorepo_dest}"
+    
+    # Copy the monorepo to the project directory
+    log "Copying from ${MONO_REPO_PATH} to ${monorepo_dest}..."
+    cp -r "${MONO_REPO_PATH}"/* "${monorepo_dest}/" || handle_error "Failed to copy monorepo"
+    
+    # Update the Dockerfile to use the local monorepo path
+    log "Updating Dockerfile to use local monorepo path..."
+    sed -i "s|COPY ${MONO_REPO_PATH} /opt/${PROJECT_NAME}|COPY ./monorepo /opt/${PROJECT_NAME}|" "${project_dir}/Dockerfile" || handle_error "Failed to update Dockerfile"
+    
+    log "Monorepo copied successfully"
+  fi
+  
   # Use podman-compose or docker-compose based on available container engine
   if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
     if command -v podman-compose &> /dev/null; then
-      podman-compose up -d --build || handle_error "Failed to start project with podman-compose"
+      log "Using podman-compose to build and start the container..."
+      # CRITICAL FIX: Use project name flag to ensure consistent container naming
+      podman-compose -p "${PROJECT_NAME}" up -d --build || handle_error "Failed to start project with podman-compose"
+      
+      # CRITICAL FIX: Get the actual container name created by podman-compose
+      local actual_container_name
+      actual_container_name=$($CONTAINER_ENGINE ps --filter "name=${PROJECT_NAME}" --format "{{.Names}}" | head -1)
+      
+      # If no container found, try to find with alternative naming pattern (project-name_service_1)
+      if [[ -z "$actual_container_name" ]]; then
+        log "No container found with name filter '${PROJECT_NAME}', trying alternative naming pattern..."
+        actual_container_name=$($CONTAINER_ENGINE ps --format "{{.Names}}" | grep "${PROJECT_NAME}_" | head -1)
+      fi
+      
+      if [[ -n "$actual_container_name" && "$actual_container_name" != "${PROJECT_NAME}" ]]; then
+        log "Container created with name '${actual_container_name}', renaming to '${PROJECT_NAME}'..."
+        $CONTAINER_ENGINE stop "$actual_container_name" || handle_error "Failed to stop container for renaming"
+        $CONTAINER_ENGINE rename "$actual_container_name" "${PROJECT_NAME}" || handle_error "Failed to rename container"
+        $CONTAINER_ENGINE start "${PROJECT_NAME}" || handle_error "Failed to start renamed container"
+      fi
     else
       # Fallback to podman build and run
+      log "Fallback to manual podman build and run..."
       $CONTAINER_ENGINE build -t "${PROJECT_NAME}" . || handle_error "Failed to build project image"
-      $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
-        --network "${project_network}" \
-        -p "${PROJECT_PORT}:80" \
-        -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
-        -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
-        -v "${project_dir}/html:/usr/share/nginx/html:ro" \
-        -v "${project_dir}/certs:/etc/nginx/certs:ro" \
-        -v "${project_dir}/logs:/var/log/nginx" \
-        "${PROJECT_NAME}" || handle_error "Failed to run project container"
+      
+      # Run container with appropriate volumes based on build type
+      if [[ "$USE_NIX_BUILD" == true && -n "${BACKEND_PATH}" ]]; then
+        $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+          --network "${project_network}" \
+          -p "${PROJECT_PORT}:80" \
+          -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+          -v "${project_dir}/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf:ro" \
+          -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+          -v "${project_dir}/logs:/var/log/nginx" \
+          "${PROJECT_NAME}" || handle_error "Failed to run project container"
+      elif [[ "$USE_NIX_BUILD" == true ]]; then
+        $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+          --network "${project_network}" \
+          -p "${PROJECT_PORT}:80" \
+          -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+          -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+          -v "${project_dir}/logs:/var/log/nginx" \
+          "${PROJECT_NAME}" || handle_error "Failed to run project container"
+      else
+        $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+          --network "${project_network}" \
+          -p "${PROJECT_PORT}:80" \
+          -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+          -v "${project_dir}/html:/usr/share/nginx/html:ro" \
+          -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+          -v "${project_dir}/logs:/var/log/nginx" \
+          "${PROJECT_NAME}" || handle_error "Failed to run project container"
+      fi
     fi
   else
-    docker-compose up -d --build || handle_error "Failed to start project with docker-compose"
+    log "Using docker-compose to build and start the container..."
+    # CRITICAL FIX: Use project name flag to ensure consistent container naming
+    docker-compose -p "${PROJECT_NAME}" up -d --build || handle_error "Failed to start project with docker-compose"
+    
+    # CRITICAL FIX: Get the actual container name created by docker-compose
+    local actual_container_name
+    actual_container_name=$($CONTAINER_ENGINE ps --filter "name=${PROJECT_NAME}" --format "{{.Names}}" | head -1)
+    
+    if [[ -n "$actual_container_name" && "$actual_container_name" != "${PROJECT_NAME}" ]]; then
+      log "Container created with name '${actual_container_name}', renaming to '${PROJECT_NAME}'..."
+      $CONTAINER_ENGINE stop "$actual_container_name" || handle_error "Failed to stop container for renaming"
+      $CONTAINER_ENGINE rename "$actual_container_name" "${PROJECT_NAME}" || handle_error "Failed to rename container"
+      $CONTAINER_ENGINE start "${PROJECT_NAME}" || handle_error "Failed to start renamed container"
+    fi
+  fi
+  
+  # CRITICAL FIX: Verify container is actually running
+  log "Verifying container is running..."
+  local container_running=false
+  local max_verify_attempts=5
+  local verify_attempt=0
+  
+  while [[ "$container_running" == "false" && $verify_attempt -lt $max_verify_attempts ]]; do
+    if $CONTAINER_ENGINE ps --format "{{.Names}}" | grep -q "^${PROJECT_NAME}$"; then
+      container_running=true
+      log "Container '${PROJECT_NAME}' is running"
+    else
+      log "Verify attempt $((verify_attempt + 1)): Container not running yet, checking status..."
+      $CONTAINER_ENGINE ps -a --filter "name=${PROJECT_NAME}" --format "{{.Names}} {{.Status}}"
+      
+      # Check if container exists but is not running
+      if $CONTAINER_ENGINE ps -a --format "{{.Names}}" | grep -q "^${PROJECT_NAME}$"; then
+        log "Container exists but is not running. Checking logs..."
+        $CONTAINER_ENGINE logs --tail 20 "${PROJECT_NAME}"
+        
+        # Try to restart the container
+        log "Attempting to restart container..."
+        $CONTAINER_ENGINE restart "${PROJECT_NAME}" || handle_error "Failed to restart container"
+      fi
+      
+      sleep 3
+      ((verify_attempt++))
+    fi
+  done
+  
+  if [[ "$container_running" == "false" ]]; then
+    handle_error "Failed to verify container is running after ${max_verify_attempts} attempts"
   fi
   
   # Connect project container to proxy network

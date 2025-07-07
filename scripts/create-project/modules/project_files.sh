@@ -42,7 +42,7 @@ function generate_dockerfile() {
 FROM nginx:alpine
 
 # Install required packages
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl supervisor bash nix nodejs npm
 
 # Copy SSL certificates
 COPY --chown=nginx:nginx certs/cert.pem /etc/ssl/certs/cert.pem
@@ -72,55 +72,10 @@ function generate_nix_dockerfile() {
   
   log "Creating Nix-compatible Dockerfile..."
   
-  cat > "${project_dir}/Dockerfile" << EOF
-# Multi-stage build for Nix-based projects
-FROM nixos/nix:latest AS builder
-
-# Copy monorepo
-COPY ${MONO_REPO_PATH} /opt/${PROJECT_NAME}
-WORKDIR /opt/${PROJECT_NAME}
-
-# Detect and use flake.nix for building frontend and backend
-RUN if [ -f flake.nix ]; then \\
-      nix --extra-experimental-features "nix-command flakes" develop --command bash -c "${FRONTEND_BUILD_CMD}" && \\
-      echo "Frontend build completed successfully"; \\
-    else \\
-      echo "Error: flake.nix not found" && exit 1; \\
-    fi
-
-# Final image
-FROM nginx:alpine
-
-# Install required packages
-RUN apk add --no-cache curl supervisor bash nix
-
-# Create required directories
-RUN mkdir -p /etc/nginx/conf.d \\
-    && mkdir -p /usr/share/nginx/html \\
-    && mkdir -p /var/log/nginx \\
-    && mkdir -p /opt/backend \\
-    && mkdir -p /etc/supervisor/conf.d
-
-# Copy SSL certificates
-COPY --chown=nginx:nginx certs/cert.pem /etc/ssl/certs/cert.pem
-COPY --chown=nginx:nginx certs/cert-key.pem /etc/ssl/private/cert-key.pem
-
-# Copy built frontend from builder stage
-COPY --from=builder /opt/${PROJECT_NAME}/${FRONTEND_PATH}/${FRONTEND_BUILD_DIR} /usr/share/nginx/html
-
-# Copy backend if specified
-$([ -n "${BACKEND_PATH}" ] && echo "# Copy backend code\nCOPY --from=builder /opt/${PROJECT_NAME}/${BACKEND_PATH} /opt/backend" || echo "# No backend specified")
-
-# Set permissions
-RUN chown -R nginx:nginx /var/log/nginx \\
-    && chown -R nginx:nginx /usr/share/nginx/html \\
-    && chmod -R 755 /var/log/nginx
-
-# Create health check directory
-RUN mkdir -p /usr/share/nginx/html/health
-
-# Create health check file
-RUN echo '<!DOCTYPE html>
+  # First, create the health check HTML file separately
+  mkdir -p "${project_dir}/html/health"
+  cat > "${project_dir}/html/health/index.html" << EOF
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -181,7 +136,71 @@ RUN echo '<!DOCTYPE html>
         setInterval(updateTime, 1000);
     </script>
 </body>
-</html>' > /usr/share/nginx/html/health/index.html
+</html>
+EOF
+  
+  # Determine the CMD based on whether backend is specified
+  local cmd_instruction
+  if [ -n "${BACKEND_PATH}" ]; then
+    cmd_instruction='CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]'
+  else
+    cmd_instruction='CMD ["nginx", "-g", "daemon off;"]'
+  fi
+  
+  # Now create the Dockerfile without the problematic multi-line string
+  cat > "${project_dir}/Dockerfile" << EOF
+# Multi-stage build for Nix-based projects
+FROM nixos/nix:latest AS builder
+
+# Copy monorepo
+COPY ${MONO_REPO_PATH} /opt/${PROJECT_NAME}
+WORKDIR /opt/${PROJECT_NAME}
+
+# Detect and use flake.nix for building frontend and backend
+RUN if [ -f flake.nix ]; then \\
+      nix --extra-experimental-features "nix-command flakes" develop --command bash -c "${FRONTEND_BUILD_CMD}" && \\
+      echo "Frontend build completed successfully"; \\
+    else \\
+      echo "Error: flake.nix not found" && exit 1; \\
+    fi
+
+# Final image
+FROM nginx:alpine
+
+# Install required packages
+RUN apk add --no-cache curl supervisor bash nix nodejs npm
+
+# Create required directories
+RUN mkdir -p /etc/nginx/conf.d \
+    && mkdir -p /usr/share/nginx/html \
+    && mkdir -p /var/log/nginx \
+    && mkdir -p /opt/backend \
+    && mkdir -p /etc/supervisor/conf.d \
+    && mkdir -p /usr/share/nginx/html/health \
+    && mkdir -p /var/run \
+    && touch /var/run/supervisord.sock \
+    && chmod 777 /var/run/supervisord.sock
+
+# Copy SSL certificates
+COPY --chown=nginx:nginx certs/cert.pem /etc/ssl/certs/cert.pem
+COPY --chown=nginx:nginx certs/cert-key.pem /etc/ssl/private/cert-key.pem
+
+# Copy built frontend from builder stage
+COPY --from=builder /opt/${PROJECT_NAME}/${FRONTEND_PATH}/${FRONTEND_BUILD_DIR} /usr/share/nginx/html
+
+# Copy health check file
+COPY html/health/index.html /usr/share/nginx/html/health/index.html
+
+# Copy backend if specified
+$([ -n "${BACKEND_PATH}" ] && echo "# Copy backend code
+COPY --from=builder /opt/${PROJECT_NAME}/${BACKEND_PATH} /opt/backend
+# CRITICAL FIX: Copy flake.nix to backend directory
+COPY --from=builder /opt/${PROJECT_NAME}/flake.nix /opt/backend/flake.nix" || echo "# No backend specified")
+
+# Set permissions
+RUN chown -R nginx:nginx /var/log/nginx \\
+    && chown -R nginx:nginx /usr/share/nginx/html \\
+    && chmod -R 755 /var/log/nginx
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \\
@@ -190,8 +209,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \\
 # Expose port
 EXPOSE 80
 
-# Start command based on whether backend is specified
-$([ -n "${BACKEND_PATH}" ] && echo "# Start supervisord\nCMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor/conf.d/supervisord.conf\"]" || echo "# Start nginx\nCMD [\"nginx\", \"-g\", \"daemon off;\"]")
+# Start command
+${cmd_instruction}
 EOF
 
   # Create supervisord.conf if backend is specified
@@ -221,17 +240,31 @@ stdout_logfile=/var/log/nginx/access.log
 stdout_logfile_maxbytes=10MB
 
 [program:backend]
-command=/bin/sh -c "cd /opt/backend && nix --extra-experimental-features \\"nix-command flakes\\" develop --command bash -c \\"${BACKEND_START_CMD:-${BACKEND_BUILD_CMD}}\\""
+command=/bin/sh -c "cd /opt/backend && node src/server.js"
 autostart=true
 autorestart=true
 startretries=5
 numprocs=1
-startsecs=5
-user=nginx
+startsecs=10
+user=root
 redirect_stderr=true
 stdout_logfile=/var/log/backend.log
 stdout_logfile_maxbytes=10MB
-environment=NODE_ENV=production
+environment=NODE_ENV=production,PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+[supervisord:info]
+nocleanup=true
+
+[unix_http_server]
+file=/var/run/supervisord.sock
+chmod=0700
+username=dummy
+password=dummy
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisord.sock
+username=dummy
+password=dummy
 
 [include]
 files = /etc/supervisor/conf.d/*.conf
@@ -244,7 +277,10 @@ function generate_docker_compose() {
   local project_dir="$1"
   
   log "Creating docker-compose.yml..."
-  cat > "${project_dir}/docker-compose.yml" << EOF
+  
+  # For Nix build, we need to add the monorepo as a build context
+  if [[ "$USE_NIX_BUILD" == true ]]; then
+    cat > "${project_dir}/docker-compose.yml" << EOF
 version: '3.8'
 
 services:
@@ -256,7 +292,6 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./conf.d:/etc/nginx/conf.d:ro
-$([ "$USE_NIX_BUILD" == false ] && echo "      - ${FRONTEND_MOUNT}:/usr/share/nginx/html:ro" || echo "      # No frontend mount needed for Nix build")
       - ./logs:/var/log/nginx
 $([ -n "${BACKEND_PATH}" ] && echo "      - ./supervisord.conf:/etc/supervisor/conf.d/supervisord.conf:ro" || echo "")
     restart: unless-stopped
@@ -270,6 +305,34 @@ networks:
   ${PROJECT_NAME}-network:
     external: true
 EOF
+  else
+    # Standard docker-compose.yml for non-Nix build
+    cat > "${project_dir}/docker-compose.yml" << EOF
+version: '3.8'
+
+services:
+  ${PROJECT_NAME}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ${FRONTEND_MOUNT}:/usr/share/nginx/html:ro
+      - ./logs:/var/log/nginx
+    restart: unless-stopped
+    networks:
+      - ${PROJECT_NAME}-network
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+
+networks:
+  ${PROJECT_NAME}-network:
+    external: true
+EOF
+  fi
 }
 
 # Function: Generate nginx.conf
@@ -347,15 +410,29 @@ http {
             proxy_connect_timeout 60s;
             proxy_send_timeout 60s;
             proxy_read_timeout 60s;
+            
+            # CRITICAL FIX: Add error logging for debugging
+            error_log /var/log/nginx/backend_error.log debug;
+            access_log /var/log/nginx/backend_access.log;
         }
 
-        # Backend health check endpoint
-        location /api/health/ {
-            proxy_pass http://localhost:3000/health/;
+        # Backend health check endpoint - both with and without trailing slash
+        location = /api/health {
+            proxy_pass http://localhost:3000/health;
             proxy_http_version 1.1;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
-            access_log off;
+            access_log /var/log/nginx/health_access.log;
+            error_log /var/log/nginx/health_error.log debug;
+        }
+        
+        location = /api/health/ {
+            proxy_pass http://localhost:3000/health;
+            proxy_http_version 1.1;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            access_log /var/log/nginx/health_access.log;
+            error_log /var/log/nginx/health_error.log debug;
         }
 "
   fi

@@ -1,0 +1,84 @@
+---
+description: Rules and best practices for container runtime configuration, focusing on Nix integration, supervisord setup, container naming conventions, and health check implementations. Includes critical guidelines for container deployment, service management, and error handling.
+globs: 
+alwaysApply: false
+---
+
+# Container Runtime Configuration Rule
+
+## Critical Rules
+
+- ALWAYS ensure flake.nix is copied to the correct working directory in the container when using Nix
+- ALWAYS add fallback mechanisms when running Nix commands in containers (e.g., `nix develop || node src/server.js`)
+- NEVER assume container names will match the specified name when using container orchestration tools
+- ALWAYS handle alternative container naming patterns (e.g., `project_service_1` vs `project-name`)
+- ALWAYS verify container is actually running after deployment before proceeding with tests
+- ALWAYS normalize URL paths in health endpoints to handle both `/health` and `/health/` formats
+- ALWAYS include proper socket permissions for supervisord (`chmod 777 /var/run/supervisor.sock`)
+- ALWAYS use root user for services that require elevated permissions (e.g., Nix commands)
+- ALWAYS add comprehensive error logging to container startup scripts
+- ALWAYS clean up containers with the same name before deployment to prevent conflicts
+
+## Container Naming Patterns
+
+- Direct container run: `container-name`
+- Docker Compose: `directory_service_1`
+- Podman Compose: `project-name_service_1`
+
+## Supervisord Configuration Best Practices
+
+- Use fallback commands with `||` operator for resilience
+- Ensure proper socket permissions for control interface
+- Include proper log redirection for all services
+- Set appropriate `startretries` and `startsecs` values
+- Use `user=root` for services requiring elevated permissions
+
+## Health Check Implementation
+
+- Normalize URL paths to handle trailing slashes: `path.endsWith('/') ? path.slice(0, -1) : path`
+- Log health check requests for easier debugging
+- Return standardized JSON response format: `{ status: 'ok', service: 'service-name' }`
+- Configure nginx to proxy health endpoints without trailing slashes
+
+## Examples
+
+<example>
+# Proper supervisord command with fallback
+[program:backend]
+command=/bin/sh -c "cd /opt/backend && (nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"npm start\" || node src/server.js)"
+user=root
+redirect_stderr=true
+stdout_logfile=/var/log/backend.log
+
+# Proper container naming handling
+actual_container_name=$($CONTAINER_ENGINE ps --filter "name=${PROJECT_NAME}" --format "{{.Names}}" | head -1)
+
+# If no container found, try alternative naming pattern
+if [[ -z "$actual_container_name" ]]; then
+  actual_container_name=$($CONTAINER_ENGINE ps --format "{{.Names}}" | grep "${PROJECT_NAME}_" | head -1)
+fi
+
+# Normalize URL paths in health endpoints
+const path = req.url.endsWith('/') ? req.url.slice(0, -1) : req.url;
+if (path === '/health') {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'ok', service: 'backend' }));
+}
+</example>
+
+<example type="invalid">
+# Missing fallback for Nix command
+command=/bin/sh -c "cd /opt/backend && nix develop --command npm start"
+
+# Not handling alternative container naming patterns
+$CONTAINER_ENGINE ps | grep "^${PROJECT_NAME}$"
+
+# Not normalizing URL paths
+if (req.url === '/health/') {
+  // This will miss requests to /health without trailing slash
+}
+
+# Not copying flake.nix to working directory
+COPY --from=builder /opt/${PROJECT_NAME}/${BACKEND_PATH} /opt/backend
+# Missing: COPY --from=builder /opt/${PROJECT_NAME}/flake.nix /opt/backend/
+</example>
