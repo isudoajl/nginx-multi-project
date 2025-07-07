@@ -26,6 +26,7 @@ source "${MODULES_DIR}/proxy.sh"
 source "${MODULES_DIR}/project_structure.sh"
 source "${MODULES_DIR}/project_files.sh"
 source "${MODULES_DIR}/project_functions.sh"
+source "${MODULES_DIR}/build_process.sh"
 source "${MODULES_DIR}/deployment.sh"
 source "${MODULES_DIR}/verification.sh"
 
@@ -46,6 +47,9 @@ setup_project_structure
 
 # Generate project files
 generate_project_files
+
+# Build project (new step)
+build_project
 
 # Configure environment based on type
 if [[ "$ENV_TYPE" == "DEV" ]]; then

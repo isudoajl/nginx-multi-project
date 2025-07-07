@@ -13,7 +13,21 @@ mkdir -p "${PROJECTS_DIR}"
 # Function: Log messages
 function log() {
   local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-  echo "[$timestamp] $1" | tee -a "$LOG_FILE"
+  local message="[$timestamp] $1"
+  
+  # Print to stdout
+  echo "$message"
+  
+  # If LOG_FILE is defined and the directory exists, append to log file
+  if [[ -n "${LOG_FILE}" ]]; then
+    # Ensure log directory exists
+    mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null || true
+    
+    # Append to log file if directory exists
+    if [[ -d "$(dirname "${LOG_FILE}")" ]]; then
+      echo "$message" >> "${LOG_FILE}" 2>/dev/null || true
+    fi
+  fi
 }
 
 # Function: Handle errors
