@@ -19,11 +19,28 @@ function display_help() {
   echo "  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)"
   echo "  --help, -h               Display this help message"
   echo ""
+  echo "Nix-based Build Options:"
+  echo "  --use-nix-build          Enable Nix-based containerized builds"
+  echo "  --mono-repo DIR          Source monorepo location on host"
+  echo "  --frontend-path DIR      Relative path to frontend within monorepo"
+  echo "  --frontend-build-dir DIR Frontend build output directory"
+  echo "  --frontend-build-cmd CMD Command to build frontend"
+  echo "  --backend-path DIR       Relative path to backend within monorepo"
+  echo "  --backend-build-cmd CMD  Command to build backend"
+  echo "  --backend-start-cmd CMD  Command to start backend (defaults to backend-build-cmd if not specified)"
+  echo ""
   echo "Examples:"
   echo "  $0 --name my-project --port 8080 --domain example.com"
   echo "  $0 -n my-project -p 8080 -d example.com -e DEV"
   echo "  $0 -n my-project -p 8080 -d example.com -e PRO"
   echo "  $0 -n my-project -p 8080 -d example.com -m /path/to/frontend"
+  echo ""
+  echo "Nix-based Build Example:"
+  echo "  $0 --name my-project --port 8080 --domain example.com --use-nix-build \\"
+  echo "     --mono-repo /path/to/repo --frontend-path packages/frontend \\"
+  echo "     --frontend-build-dir dist --frontend-build-cmd \"npm run build\" \\"
+  echo "     --backend-path packages/backend --backend-build-cmd \"npm run build\" \\"
+  echo "     --backend-start-cmd \"npm start\""
 }
 
 # Function: Parse arguments
@@ -36,6 +53,16 @@ function parse_arguments() {
   CERT_PATH=""
   KEY_PATH=""
   ENV_TYPE="DEV"
+  
+  # New Nix-based build parameters
+  USE_NIX_BUILD=false
+  MONO_REPO_PATH=""
+  FRONTEND_PATH=""
+  FRONTEND_BUILD_DIR=""
+  FRONTEND_BUILD_CMD=""
+  BACKEND_PATH=""
+  BACKEND_BUILD_CMD=""
+  BACKEND_START_CMD=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -69,6 +96,38 @@ function parse_arguments() {
         ;;
       --env|-e)
         ENV_TYPE="$2"
+        shift 2
+        ;;
+      --use-nix-build)
+        USE_NIX_BUILD=true
+        shift
+        ;;
+      --mono-repo)
+        MONO_REPO_PATH="$2"
+        shift 2
+        ;;
+      --frontend-path)
+        FRONTEND_PATH="$2"
+        shift 2
+        ;;
+      --frontend-build-dir)
+        FRONTEND_BUILD_DIR="$2"
+        shift 2
+        ;;
+      --frontend-build-cmd)
+        FRONTEND_BUILD_CMD="$2"
+        shift 2
+        ;;
+      --backend-path)
+        BACKEND_PATH="$2"
+        shift 2
+        ;;
+      --backend-build-cmd)
+        BACKEND_BUILD_CMD="$2"
+        shift 2
+        ;;
+      --backend-start-cmd)
+        BACKEND_START_CMD="$2"
         shift 2
         ;;
       --help|-h)
@@ -133,6 +192,64 @@ function parse_arguments() {
     KEY_PATH="/etc/ssl/certs/private/cert-key.pem"
   fi
   
+  # Validate Nix build parameters if enabled
+  if [[ "$USE_NIX_BUILD" == true ]]; then
+    if [[ -z "$MONO_REPO_PATH" ]]; then
+      log "ERROR: Monorepo path is required when using Nix build. Use --mono-repo to specify."
+      exit 1
+    fi
+    
+    if [[ ! -d "$MONO_REPO_PATH" ]]; then
+      log "ERROR: Monorepo path does not exist: $MONO_REPO_PATH"
+      exit 1
+    fi
+    
+    if [[ -z "$FRONTEND_PATH" ]]; then
+      log "ERROR: Frontend path is required when using Nix build. Use --frontend-path to specify."
+      exit 1
+    fi
+    
+    if [[ -z "$FRONTEND_BUILD_DIR" ]]; then
+      log "ERROR: Frontend build directory is required when using Nix build. Use --frontend-build-dir to specify."
+      exit 1
+    fi
+    
+    if [[ -z "$FRONTEND_BUILD_CMD" ]]; then
+      log "ERROR: Frontend build command is required when using Nix build. Use --frontend-build-cmd to specify."
+      exit 1
+    fi
+    
+    # Backend is optional, but if path is specified, command is required
+    if [[ -n "$BACKEND_PATH" && -z "$BACKEND_BUILD_CMD" ]]; then
+      log "ERROR: Backend build command is required when backend path is specified. Use --backend-build-cmd to specify."
+      exit 1
+    fi
+    
+    # If backend start command is not specified, use build command
+    if [[ -n "$BACKEND_PATH" && -z "$BACKEND_START_CMD" ]]; then
+      log "Backend start command not specified, using build command as default."
+      BACKEND_START_CMD="$BACKEND_BUILD_CMD"
+    fi
+    
+    # Normalize paths
+    MONO_REPO_PATH=$(realpath "$MONO_REPO_PATH" 2>/dev/null || echo "")
+    if [[ -z "$MONO_REPO_PATH" ]]; then
+      log "ERROR: Failed to resolve monorepo path. Please provide a valid path."
+      exit 1
+    fi
+    
+    # Check for flake.nix in monorepo
+    if [[ ! -f "$MONO_REPO_PATH/flake.nix" ]]; then
+      log "Warning: flake.nix not found in monorepo root. Nix environment detection may fail."
+    fi
+  fi
+  
   log "Arguments parsed successfully: PROJECT_NAME=$PROJECT_NAME, DOMAIN_NAME=$DOMAIN_NAME, ENV_TYPE=$ENV_TYPE"
+  if [[ "$USE_NIX_BUILD" == true ]]; then
+    log "Nix build enabled: MONO_REPO_PATH=$MONO_REPO_PATH, FRONTEND_PATH=$FRONTEND_PATH, BACKEND_PATH=$BACKEND_PATH"
+    if [[ -n "$BACKEND_PATH" ]]; then
+      log "Backend configuration: BUILD_CMD=$BACKEND_BUILD_CMD, START_CMD=$BACKEND_START_CMD"
+    fi
+  fi
   log "Frontend mount point: $FRONTEND_MOUNT"
 } 

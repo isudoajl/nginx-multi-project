@@ -1,0 +1,17 @@
+version: '3.8'
+
+# Development environment overrides
+services:
+  # Project service name will be dynamically replaced by the script
+  project-name:
+    # Development-specific settings
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    # Port mapping for direct access (bypassing proxy)
+    ports:
+      - "${PROJECT_PORT}:80"
+    # Additional development volumes
+    volumes:
+      - ./logs:/var/log/nginx
+      - ./logs:/var/log 

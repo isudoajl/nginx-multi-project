@@ -73,17 +73,17 @@ function generate_nix_dockerfile() {
   log "Creating Nix-compatible Dockerfile..."
   
   cat > "${project_dir}/Dockerfile" << EOF
-# Base image with Nix support
+# Multi-stage build for Nix-based projects
 FROM nixos/nix:latest AS builder
 
 # Copy monorepo
 COPY ${MONO_REPO_PATH} /opt/${PROJECT_NAME}
 WORKDIR /opt/${PROJECT_NAME}
 
-# Detect and use flake.nix
+# Detect and use flake.nix for building frontend and backend
 RUN if [ -f flake.nix ]; then \\
       nix --extra-experimental-features "nix-command flakes" develop --command bash -c "${FRONTEND_BUILD_CMD}" && \\
-      $([ -n "${BACKEND_PATH}" ] && echo "nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"${BACKEND_BUILD_CMD}\"" || echo "echo \"No backend build required\""); \\
+      echo "Frontend build completed successfully"; \\
     else \\
       echo "Error: flake.nix not found" && exit 1; \\
     fi
@@ -92,39 +92,106 @@ RUN if [ -f flake.nix ]; then \\
 FROM nginx:alpine
 
 # Install required packages
-RUN apk add --no-cache curl $([ -n "${BACKEND_PATH}" ] && echo "supervisor")
+RUN apk add --no-cache curl supervisor bash nix
+
+# Create required directories
+RUN mkdir -p /etc/nginx/conf.d \\
+    && mkdir -p /usr/share/nginx/html \\
+    && mkdir -p /var/log/nginx \\
+    && mkdir -p /opt/backend \\
+    && mkdir -p /etc/supervisor/conf.d
 
 # Copy SSL certificates
 COPY --chown=nginx:nginx certs/cert.pem /etc/ssl/certs/cert.pem
 COPY --chown=nginx:nginx certs/cert-key.pem /etc/ssl/private/cert-key.pem
 
-# Copy built frontend
-COPY --from=builder /opt/${PROJECT_NAME}/${FRONTEND_PATH}/${FRONTEND_BUILD_DIR} /tmp/frontend-build
-
-# Create symlink to nginx html directory
-RUN rm -rf /usr/share/nginx/html && \\
-    ln -s /tmp/frontend-build /usr/share/nginx/html
+# Copy built frontend from builder stage
+COPY --from=builder /opt/${PROJECT_NAME}/${FRONTEND_PATH}/${FRONTEND_BUILD_DIR} /usr/share/nginx/html
 
 # Copy backend if specified
-$([ -n "${BACKEND_PATH}" ] && echo "# Copy backend\nCOPY --from=builder /opt/${PROJECT_NAME}/${BACKEND_PATH} /opt/backend" || echo "# No backend specified")
+$([ -n "${BACKEND_PATH}" ] && echo "# Copy backend code\nCOPY --from=builder /opt/${PROJECT_NAME}/${BACKEND_PATH} /opt/backend" || echo "# No backend specified")
 
-# Configure supervisord if backend is specified
-$([ -n "${BACKEND_PATH}" ] && echo "# Configure supervisord\nRUN mkdir -p /etc/supervisor/conf.d" || echo "# No backend specified")
-
-# Create required directories and set permissions
-RUN mkdir -p /etc/nginx/conf.d \\
-    && mkdir -p /var/log/nginx \\
-    && chown -R nginx:nginx /var/log/nginx \\
+# Set permissions
+RUN chown -R nginx:nginx /var/log/nginx \\
+    && chown -R nginx:nginx /usr/share/nginx/html \\
     && chmod -R 755 /var/log/nginx
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
-  CMD curl -f http://localhost/health || exit 1
+# Create health check directory
+RUN mkdir -p /usr/share/nginx/html/health
 
+# Create health check file
+RUN echo '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2ecc71;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            background-color: #e8f8f5;
+            border-left: 4px solid #2ecc71;
+            margin-bottom: 20px;
+        }
+        .details {
+            margin-top: 20px;
+        }
+        .details p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Health Check</h1>
+        <div class="status">
+            <strong>Status:</strong> OK
+        </div>
+        <div class="details">
+            <p><strong>Service:</strong> Frontend</p>
+            <p><strong>Time:</strong> <span id="current-time"></span></p>
+            <p><strong>Container:</strong> ${PROJECT_NAME}</p>
+            <p><strong>Domain:</strong> ${DOMAIN_NAME}</p>
+        </div>
+    </div>
+    <script>
+        // Update current time
+        function updateTime() {
+            document.getElementById("current-time").textContent = new Date().toISOString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>' > /usr/share/nginx/html/health/index.html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \\
+  CMD curl -f http://localhost/health/ || exit 1
+
+# Expose port
 EXPOSE 80
 
 # Start command based on whether backend is specified
-$([ -n "${BACKEND_PATH}" ] && echo "CMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor/conf.d/supervisord.conf\"]" || echo "CMD [\"nginx\", \"-g\", \"daemon off;\"]")
+$([ -n "${BACKEND_PATH}" ] && echo "# Start supervisord\nCMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor/conf.d/supervisord.conf\"]" || echo "# Start nginx\nCMD [\"nginx\", \"-g\", \"daemon off;\"]")
 EOF
 
   # Create supervisord.conf if backend is specified
@@ -133,24 +200,41 @@ EOF
     cat > "${project_dir}/supervisord.conf" << EOF
 [supervisord]
 nodaemon=true
+user=root
 logfile=/var/log/supervisord.log
 logfile_maxbytes=50MB
 logfile_backups=10
 loglevel=info
+pidfile=/var/run/supervisord.pid
 
 [program:nginx]
 command=nginx -g "daemon off;"
 autostart=true
 autorestart=true
-stdout_logfile=/var/log/nginx/stdout.log
-stderr_logfile=/var/log/nginx/stderr.log
+startretries=5
+numprocs=1
+startsecs=0
+process_name=%(program_name)s_%(process_num)02d
+stderr_logfile=/var/log/nginx/error.log
+stderr_logfile_maxbytes=10MB
+stdout_logfile=/var/log/nginx/access.log
+stdout_logfile_maxbytes=10MB
 
 [program:backend]
-command=bash -c "cd /opt/backend && ${BACKEND_BUILD_CMD}"
+command=/bin/sh -c "cd /opt/backend && nix --extra-experimental-features \\"nix-command flakes\\" develop --command bash -c \\"${BACKEND_START_CMD:-${BACKEND_BUILD_CMD}}\\""
 autostart=true
 autorestart=true
-stdout_logfile=/var/log/backend-stdout.log
-stderr_logfile=/var/log/backend-stderr.log
+startretries=5
+numprocs=1
+startsecs=5
+user=nginx
+redirect_stderr=true
+stdout_logfile=/var/log/backend.log
+stdout_logfile_maxbytes=10MB
+environment=NODE_ENV=production
+
+[include]
+files = /etc/supervisor/conf.d/*.conf
 EOF
   fi
 }
@@ -202,6 +286,7 @@ pid /var/run/nginx.pid;
 
 events {
     worker_connections 1024;
+    multi_accept on;
 }
 
 http {
@@ -218,25 +303,27 @@ http {
     # Basic settings
     sendfile on;
     tcp_nopush on;
+    tcp_nodelay on;
     keepalive_timeout 65;
     types_hash_max_size 2048;
     
+    # Include additional configurations
+    include /etc/nginx/conf.d/*.conf;
+    
     server {
-        listen 80;
+        listen 80 default_server;
+        listen [::]:80 default_server;
         server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
         
-        # Include configuration files
-        include /etc/nginx/conf.d/*.conf;
-        
-        # Root directory
+        # Root directory for frontend static files
         root /usr/share/nginx/html;
         index index.html;
         
-        # Health check endpoint
-        location /health {
+        # Health check endpoint for container health monitoring
+        location /health/ {
             access_log off;
             add_header Content-Type text/plain;
-            return 200 'OK';
+            return 200 'OK\n';
         }
 "
 
@@ -245,24 +332,44 @@ http {
     nginx_conf+="
         # Backend API proxy
         location /api/ {
+            # Proxy to the backend service running in the container
             proxy_pass http://localhost:3000/;
             proxy_http_version 1.1;
             proxy_set_header Upgrade \$http_upgrade;
             proxy_set_header Connection 'upgrade';
             proxy_set_header Host \$host;
-            proxy_cache_bypass \$http_upgrade;
             proxy_set_header X-Real-IP \$remote_addr;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto \$scheme;
+            proxy_cache_bypass \$http_upgrade;
+            
+            # Timeouts
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        # Backend health check endpoint
+        location /api/health/ {
+            proxy_pass http://localhost:3000/health/;
+            proxy_http_version 1.1;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            access_log off;
         }
 "
   fi
 
   # Add default location and error pages
   nginx_conf+="        
-        # Default location
+        # Static files handling
         location / {
-            try_files \$uri \$uri/ =404;
+            try_files \$uri \$uri/ /index.html;
+        }
+
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|otf|eot|mp4)$ {
+            expires max;
+            log_not_found off;
         }
         
         # Error pages

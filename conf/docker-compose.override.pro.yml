@@ -1,0 +1,15 @@
+version: '3.8'
+
+# Production environment overrides
+services:
+  # Project service name will be dynamically replaced by the script
+  project-name:
+    # Production-specific settings
+    environment:
+      - NODE_ENV=production
+    # No direct port mapping in production (all traffic through proxy)
+    # Additional production volumes
+    volumes:
+      - ./logs:/var/log/nginx
+      - ./logs:/var/log
+    restart: always 

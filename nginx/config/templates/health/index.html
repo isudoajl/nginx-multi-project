@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2ecc71;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            background-color: #e8f8f5;
+            border-left: 4px solid #2ecc71;
+            margin-bottom: 20px;
+        }
+        .details {
+            margin-top: 20px;
+        }
+        .details p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Health Check</h1>
+        <div class="status">
+            <strong>Status:</strong> OK
+        </div>
+        <div class="details">
+            <p><strong>Service:</strong> Frontend</p>
+            <p><strong>Time:</strong> <span id="current-time"></span></p>
+            <p><strong>Container:</strong> {{PROJECT_NAME}}</p>
+            <p><strong>Domain:</strong> {{DOMAIN_NAME}}</p>
+        </div>
+    </div>
+    <script>
+        // Update current time
+        function updateTime() {
+            document.getElementById('current-time').textContent = new Date().toISOString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html> 
