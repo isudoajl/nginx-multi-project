@@ -156,13 +156,24 @@ FROM nixos/nix:latest AS builder
 COPY ${MONO_REPO_PATH} /opt/${PROJECT_NAME}
 WORKDIR /opt/${PROJECT_NAME}
 
-# Detect and use flake.nix for building frontend and backend
+# Detect and use flake.nix for building frontend
 RUN if [ -f flake.nix ]; then \\
+      cd ${FRONTEND_PATH} && \\
       nix --extra-experimental-features "nix-command flakes" develop --command bash -c "${FRONTEND_BUILD_CMD}" && \\
       echo "Frontend build completed successfully"; \\
     else \\
       echo "Error: flake.nix not found" && exit 1; \\
     fi
+
+# Build backend if specified
+$([ -n "${BACKEND_PATH}" ] && echo "# Build backend
+RUN if [ -f flake.nix ]; then \\
+      cd ${BACKEND_PATH} && \\
+      nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"${BACKEND_BUILD_CMD}\" && \\
+      echo \"Backend build completed successfully\"; \\
+    else \\
+      echo \"Error: flake.nix not found\" && exit 1; \\
+    fi" || echo "# No backend to build")
 
 # Final image
 FROM nginx:alpine
@@ -240,7 +251,8 @@ stdout_logfile=/var/log/nginx/access.log
 stdout_logfile_maxbytes=10MB
 
 [program:backend]
-command=/bin/sh -c "cd /opt/backend && node src/server.js"
+command=sh -c "cd /opt/backend && npm install && ${BACKEND_START_CMD}"
+directory=/opt/backend
 autostart=true
 autorestart=true
 startretries=5
@@ -250,7 +262,7 @@ user=root
 redirect_stderr=true
 stdout_logfile=/var/log/backend.log
 stdout_logfile_maxbytes=10MB
-environment=NODE_ENV=production,PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+environment=NODE_ENV=development,PORT=3000,PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 [supervisord:info]
 nocleanup=true
@@ -296,11 +308,14 @@ function generate_docker_compose() {
   
   # For Nix build, we need to add the monorepo as a build context
   if [[ "$USE_NIX_BUILD" == true ]]; then
+    # CRITICAL FIX: Let docker-compose/podman-compose use default image naming
     cat > "${project_dir}/docker-compose.yml" << EOF
 version: '3.8'
 
 services:
   ${PROJECT_NAME}:
+    # Let docker-compose/podman-compose use its default image naming
+    # We pre-build the image with the exact name it will look for
     build:
       context: .
       dockerfile: Dockerfile
@@ -332,6 +347,8 @@ version: '3.8'
 
 services:
   ${PROJECT_NAME}:
+    # Let docker-compose/podman-compose use its default image naming
+    # We pre-build the image with the exact name it will look for
     build:
       context: .
       dockerfile: Dockerfile

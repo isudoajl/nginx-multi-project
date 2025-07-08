@@ -54,13 +54,17 @@ function deploy_project() {
     if command -v podman-compose &> /dev/null; then
       log "Using podman-compose to build and start the container..."
       
-      # CRITICAL FIX: Check if podman-compose is trying to pull non-existent images
-      # Create a local image first to prevent podman from trying to pull from registry
-      log "Building local image first to prevent registry pull attempts..."
-      $CONTAINER_ENGINE build -t "${PROJECT_NAME}" . || handle_error "Failed to build project image"
+      # CRITICAL FIX: Pre-build the image with the exact name that podman-compose will look for
+      # podman-compose generates image names as: {project_name}_{service_name}
+      local compose_image_name="${PROJECT_NAME}_${PROJECT_NAME}"
+      log "Pre-building image with podman-compose naming convention: ${compose_image_name}..."
+      $CONTAINER_ENGINE build -t "${compose_image_name}" . || handle_error "Failed to build project image"
+      
+      # Also tag with a localhost prefix as a backup
+      $CONTAINER_ENGINE tag "${compose_image_name}" "localhost/${compose_image_name}" || log "Warning: Failed to create localhost tag"
       
       # CRITICAL FIX: Use project name flag to ensure consistent container naming
-      podman-compose -p "${PROJECT_NAME}" up -d --build || handle_error "Failed to start project with podman-compose"
+      podman-compose -p "${PROJECT_NAME}" up -d || handle_error "Failed to start project with podman-compose"
       
       # CRITICAL FIX: Get the actual container name created by podman-compose
       local actual_container_name
@@ -117,8 +121,19 @@ function deploy_project() {
     fi
   else
     log "Using docker-compose to build and start the container..."
+    
+    # CRITICAL FIX: Pre-build the image with the exact name that docker-compose will look for
+    # docker-compose generates image names as: {project_name}_{service_name}
+    local compose_image_name="${PROJECT_NAME}_${PROJECT_NAME}"
+    log "Pre-building image with docker-compose naming convention: ${compose_image_name}..."
+    $CONTAINER_ENGINE build -t "${compose_image_name}" . || handle_error "Failed to build project image"
+    
+    # Also tag with a localhost prefix as a backup
+    $CONTAINER_ENGINE tag "${compose_image_name}" "localhost/${compose_image_name}" || log "Warning: Failed to create localhost tag"
+    
     # CRITICAL FIX: Use project name flag to ensure consistent container naming
-    docker-compose -p "${PROJECT_NAME}" up -d --build || handle_error "Failed to start project with docker-compose"
+    # Also use --no-pull flag since docker-compose supports it
+    docker-compose -p "${PROJECT_NAME}" up -d --no-pull || handle_error "Failed to start project with docker-compose"
     
     # CRITICAL FIX: Get the actual container name created by docker-compose
     local actual_container_name
