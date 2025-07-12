@@ -10,6 +10,7 @@ A complete, enterprise-grade container orchestration system that transforms mono
 - **✅ Enterprise Security**: SSL/TLS, comprehensive security headers
 - **✅ Battle-Tested**: 20+ concurrent projects, 99.9% uptime validated
 - **✅ Developer-Friendly**: Single-command deployment with full automation
+- **✅ Podman Integration**: Rootless container operation with robust networking
 
 ## 🎉 Revolutionary Features (NEW - 2025-06-23)
 ### **Incremental Deployment System**
@@ -42,6 +43,15 @@ A complete, enterprise-grade container orchestration system that transforms mono
    
    # All tools are now available: podman, nginx, openssl, docker
    podman --version  # Verify podman is available
+   ```
+
+3. **Test Podman Network Connectivity** (RECOMMENDED)
+   ```bash
+   # Test podman network connectivity
+   ./scripts/test-podman-network.sh
+   
+   # If any issues are found, run the setup script
+   ./scripts/setup-podman.sh
    ```
 
 ### 🔐 SSL Certificate Requirements (CRITICAL)
@@ -145,6 +155,16 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 # • Preserve master SSL certificates in certs/
 ```
 
+### 🧹 Podman Cleanup
+
+For cleaning up podman resources without affecting the project structure:
+
+```bash
+# Clean up podman resources
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/cleanup-podman.sh
+```
+
 This avoids having to delete and re-clone the repository for fresh testing! 🎯
 
 ## 🏗️ Architecture Overview
@@ -171,12 +191,14 @@ This avoids having to delete and re-clone the repository for fresh testing! 🎯
 - **[🚀 Deployment Guide](docs/deployment-guide.md)** - From-scratch and incremental deployment scenarios
 - **[👨‍💻 Project Container Guide](docs/project-container-guide.md)** - User guide for project creation
 - **[🔧 Development Environment Setup](docs/project-container-guide.md#development-environment-setup)**
+- **[🐳 Podman Integration](docs/podman-integration.md)** - Podman setup and configuration
 
 ### **🏗️ Technical Documentation**  
 - **[🏛️ Architecture Specifications](specs/architecture-spec.md)** - System architecture deep dive
 - **[📜 Script API Reference](docs/script-api-reference.md)** - Automation script documentation
 - **[🔧 Project Container Architecture](docs/project-container-architecture.md)** - Technical implementation details
 - **[📋 Technical Specifications](specs/SPECS.md)** - Complete technical specifications
+- **[🐳 Podman Specifications](specs/podman-specs.md)** - Podman integration specifications
 
 ### **🛠️ Operations & Troubleshooting**
 - **[🚨 Troubleshooting Guide](docs/troubleshooting-guide.md)** - Common issues and debugging
