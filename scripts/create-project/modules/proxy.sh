@@ -89,6 +89,11 @@ function create_proxy_infrastructure() {
     generate_fallback_certificates "${proxy_certs_dir}"
   fi
   
+  # CRITICAL FIX: Create logs directory
+  log "Creating logs directory for proxy..."
+  mkdir -p "${proxy_dir}/logs"
+  touch "${proxy_dir}/logs/.gitkeep"
+  
   # Update proxy configuration to include fallback certificates
   ensure_proxy_default_ssl "${proxy_dir}"
   

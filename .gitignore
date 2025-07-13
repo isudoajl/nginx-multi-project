@@ -202,7 +202,8 @@ logs/
 # Project-specific generated files
 projects/*/certs/
 projects/*/logs/
-proxy/logs/
+proxy/logs/*
+!proxy/logs/.gitkeep
 
 # Temporary files
 *.tmp
