@@ -203,6 +203,19 @@ function clean_project_directories() {
   else
     log "Projects directory not found"
   fi
+  
+  # CRITICAL FIX: Clean domain-specific certificate directories in the certs folder
+  log "🔒 Cleaning domain-specific certificate directories..."
+  local certs_dir="${PROJECT_ROOT}/certs"
+  
+  if [ -d "$certs_dir" ]; then
+    # Remove all subdirectories in the certs directory (domain-specific certificates)
+    # while preserving the base certificate files
+    find "$certs_dir" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
+    log_success "Domain-specific certificate directories cleaned"
+  else
+    log "Certificates directory not found"
+  fi
 }
 
 # Function: Clean configuration files
