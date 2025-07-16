@@ -133,39 +133,88 @@ function deploy_project() {
   mkdir -p "${proxy_domains_dir}"
   local domain_config_file="${proxy_domains_dir}/${DOMAIN_NAME}.conf"
   
-  # Use container IP address instead of hostname to prevent DNS resolution issues
+  # Use container name for stable DNS resolution in Docker networks
   cat > "${domain_config_file}" << EOF
 # Domain configuration for ${DOMAIN_NAME}
-server {
-    listen 80;
-    server_name ${DOMAIN_NAME};
-    
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
+# Generated automatically for project: ${PROJECT_NAME}
 
+# HTTPS server block
 server {
-    listen 443 ssl http2;
-    server_name ${DOMAIN_NAME};
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
     
+    # SSL certificates
     ssl_certificate /etc/nginx/certs/${DOMAIN_NAME}/cert.pem;
     ssl_certificate_key /etc/nginx/certs/${DOMAIN_NAME}/cert-key.pem;
     
+    # Include SSL settings
+    include /etc/nginx/conf.d/ssl-settings.conf;
+    
+    # Include security headers
+    include /etc/nginx/conf.d/security-headers.conf;
+    
+    # Security rules from variables defined in security-headers.conf
+    if (\$bad_bot = 1) {
+        return 444;
+    }
+
+    if (\$method_allowed = 0) {
+        return 444;
+    }
+    
+    # Apply rate limiting
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    # Proxy to project container
     location / {
-        proxy_pass http://${container_ip}:80;
+        proxy_pass http://${PROJECT_NAME}:80;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Buffer settings
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+        proxy_busy_buffers_size 8k;
     }
     
+    # Health check endpoint
     location /health {
-        proxy_pass http://${container_ip}:80/health;
-        proxy_set_header Host \$host;
+        proxy_pass http://${PROJECT_NAME}:80/health;
         access_log off;
-        add_header Content-Type text/plain;
     }
+    
+    # Custom error handling
+    error_page 502 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+        internal;
+    }
+}
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+    
+    # Apply rate limiting to HTTP as well
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    return 301 https://\$server_name\$request_uri;
 }
 EOF
   
