@@ -40,7 +40,6 @@ function deploy_project() {
     $CONTAINER_ENGINE build -t "${PROJECT_NAME}" . || handle_error "Failed to build project image"
     $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
       --network "${proxy_network}" \
-      -p "${PROJECT_PORT}:80" \
       -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
       -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
       -v "${project_dir}/html:/usr/share/nginx/html:ro" \
@@ -58,28 +57,6 @@ function deploy_project() {
   # Wait for container to be fully ready
   log "Waiting for project container to be ready..."
   sleep 5
-  
-  # Get project container IP address for proxy configuration from the proxy network
-  log "Detecting project container IP address on proxy network..."
-  local container_ip=""
-  local max_attempts=10
-  local attempt=0
-  
-  while [[ -z "${container_ip}" && $attempt -lt $max_attempts ]]; do
-    # More reliable method to get the IP address
-    container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" | grep -A 20 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
-    if [[ -z "${container_ip}" ]]; then
-      log "Attempt $((attempt + 1)): Waiting for IP address assignment..."
-      sleep 2
-      ((attempt++))
-    fi
-  done
-  
-  if [[ -z "${container_ip}" ]]; then
-    handle_error "Failed to get IP address for project container from proxy network after ${max_attempts} attempts"
-  fi
-  
-  log "Project container IP address: ${container_ip}"
   
   # CRITICAL FIX: Copy domain-specific certificates to proxy certs directory
   log "Copying domain-specific certificates to proxy..."
@@ -107,7 +84,7 @@ function deploy_project() {
   local connectivity_attempt=0
   
   while [[ "$connectivity_verified" == "false" && $connectivity_attempt -lt $max_connectivity_attempts ]]; do
-    if $CONTAINER_ENGINE exec nginx-proxy curl -s --max-time 5 -f "http://${container_ip}:80/health" > /dev/null 2>&1; then
+    if $CONTAINER_ENGINE exec nginx-proxy curl -s --max-time 5 -f "http://${PROJECT_NAME}:80/health" > /dev/null 2>&1; then
       connectivity_verified=true
       log "Network connectivity verified successfully"
     else
@@ -119,7 +96,7 @@ function deploy_project() {
   
   if [[ "$connectivity_verified" == "false" ]]; then
     # Try alternative verification method - just check if container is reachable
-    if $CONTAINER_ENGINE exec nginx-proxy ping -c 1 "${container_ip}" > /dev/null 2>&1; then
+    if $CONTAINER_ENGINE exec nginx-proxy ping -c 1 "${PROJECT_NAME}" > /dev/null 2>&1; then
       log "Network connectivity verified via ping (HTTP service may not be ready yet)"
       connectivity_verified=true
     else

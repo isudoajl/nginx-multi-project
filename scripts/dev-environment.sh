@@ -119,8 +119,8 @@ function parse_arguments() {
   fi
   
   # Validate port number
-  if ! [[ "$DEV_PORT" =~ ^[0-9]+$ ]] || [ "$DEV_PORT" -lt 1024 ] || [ "$DEV_PORT" -gt 65535 ]; then
-    handle_error "Invalid port number: $DEV_PORT. Must be between 1024 and 65535."
+  if ! [[ "$DEV_PORT" =~ ^[0-9]+$ ]] || [ "$DEV_PORT" -gt 65535 ]; then
+    handle_error "Invalid port number: $DEV_PORT. Must be between 1 and 65535."
   fi
   
   # Validate subnet ID

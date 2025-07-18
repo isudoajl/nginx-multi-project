@@ -18,6 +18,7 @@ A complete, enterprise-grade container orchestration system that transforms mono
 - **🔄 Ecosystem Preservation**: Add projects without touching existing ones
 - **🛠️ Self-Healing Infrastructure**: Complete recovery from any failure state
 - **⚡ Hot Configuration Updates**: Live proxy updates without downtime
+- **🔌 Internal Container Communication**: No exposed ports needed between containers
 
 ## 🚀 Quick Start
 
@@ -69,7 +70,7 @@ certs/cert-key.pem    # SSL private key
 
 ### Create Your First Project
 
-> ⚠️ **CRITICAL**: Ports **8080** (HTTP) and **8443** (HTTPS) are **reserved for the nginx proxy**. Use different ports for your projects.
+> ⚠️ **CRITICAL**: Ports **8080** (HTTP) and **8443** (HTTPS) are **reserved for the nginx proxy**.
 
 > 🌐 **IMPORTANT**: Before deployment, ensure your domain's DNS records (A/CNAME) are pointing to your server. If using Cloudflare, set SSL/TLS to **"Full"** in the dashboard.
 
@@ -86,7 +87,6 @@ certs/cert-key.pem    # SSL private key
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name my-app \
-  --port 8090 \
   --domain myapp.com \
   --env PRO
 ```
@@ -100,7 +100,6 @@ You can specify a custom frontend directory to mount in the container:
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name my-app \
-  --port 8090 \
   --domain myapp.com \
   --env PRO \
   --frontend-mount /path/to/your/frontend
@@ -114,7 +113,6 @@ This will mount the specified directory as `/usr/share/nginx/html` in the contai
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name second-app \
-  --port 8091 \
   --domain second-app.com \
   --env PRO
 ```
@@ -172,7 +170,7 @@ This avoids having to delete and re-clone the repository for fresh testing! 🎯
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   nginx-proxy   │    │   project-a     │    │   project-b     │
-│   (Port 8080)   │◄──►│   (Port 8090)   │    │   (Port 8091)   │
+│   (Port 8080)   │◄──►│                 │    │                 │
 │   (Port 8443)   │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │

@@ -143,37 +143,32 @@ function restart_project() {
   log "Connecting project container to proxy network..."
   $CONTAINER_ENGINE network connect nginx-proxy-network "${PROJECT_NAME}" || handle_error "Failed to connect to proxy network"
   
-  # Get the new IP address
-  log "Getting new IP address..."
-  local container_ip=""
-  local max_attempts=10
-  local attempt=0
+  # Verify network connectivity
+  log "Verifying network connectivity..."
+  local connectivity_verified=false
+  local max_connectivity_attempts=5
+  local connectivity_attempt=0
   
-  while [[ -z "${container_ip}" && $attempt -lt $max_attempts ]]; do
-    container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" | grep -A 20 "\"nginx-proxy-network\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
-    if [[ -z "${container_ip}" ]]; then
-      log "Attempt $((attempt + 1)): Waiting for IP address assignment..."
-      sleep 2
-      ((attempt++))
+  while [[ "$connectivity_verified" == "false" && $connectivity_attempt -lt $max_connectivity_attempts ]]; do
+    if $CONTAINER_ENGINE exec nginx-proxy curl -s --max-time 5 -f "http://${PROJECT_NAME}:80/health" > /dev/null 2>&1; then
+      connectivity_verified=true
+      log "Network connectivity verified successfully"
+    else
+      log "Connectivity attempt $((connectivity_attempt + 1)): Waiting for container to be reachable..."
+      sleep 3
+      ((connectivity_attempt++))
     fi
   done
   
-  if [[ -z "${container_ip}" ]]; then
-    handle_error "Failed to get IP address for project container after ${max_attempts} attempts"
+  if [[ "$connectivity_verified" == "false" ]]; then
+    # Try alternative verification method - just check if container is reachable
+    if $CONTAINER_ENGINE exec nginx-proxy ping -c 1 "${PROJECT_NAME}" > /dev/null 2>&1; then
+      log "Network connectivity verified via ping (HTTP service may not be ready yet)"
+      connectivity_verified=true
+    else
+      handle_error "Failed to verify network connectivity between proxy and project container"
+    fi
   fi
-  
-  log "New container IP address: ${container_ip}"
-  
-  # Update proxy configuration
-  log "Updating proxy configuration..."
-  local domain_config_file="${PROXY_DOMAINS_DIR}/${DOMAIN_NAME}.conf"
-  
-  if [[ ! -f "$domain_config_file" ]]; then
-    handle_error "Domain configuration file not found: ${domain_config_file}"
-  fi
-  
-  # Update the proxy_pass directives with the new IP address
-  sed -i "s|proxy_pass http://[0-9.]*:80;|proxy_pass http://${container_ip}:80;|g" "$domain_config_file" || handle_error "Failed to update proxy configuration"
   
   # Test and reload proxy configuration
   log "Testing proxy configuration..."
@@ -187,7 +182,7 @@ function restart_project() {
   fi
   
   log "Project ${PROJECT_NAME} restarted successfully!"
-  log "Domain ${DOMAIN_NAME} is now configured to use IP ${container_ip}"
+  log "Domain ${DOMAIN_NAME} is now configured to use container name ${PROJECT_NAME}"
 }
 
 # Main execution

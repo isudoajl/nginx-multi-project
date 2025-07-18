@@ -10,7 +10,6 @@ function display_help() {
   echo ""
   echo "Options:"
   echo "  --name, -n NAME          Project name (required, alphanumeric with hyphens)"
-  echo "  --port, -p PORT          Internal container port (required, 1024-65535)"
   echo "  --domain, -d DOMAIN      Domain name (required, valid FQDN format)"
   echo "  --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)"
   echo "  --frontend-mount, -m DIR Path to mount as frontend in container (optional, default: ./html)"
@@ -20,16 +19,16 @@ function display_help() {
   echo "  --help, -h               Display this help message"
   echo ""
   echo "Examples:"
-  echo "  $0 --name my-project --port 8080 --domain example.com"
-  echo "  $0 -n my-project -p 8080 -d example.com -e DEV"
-  echo "  $0 -n my-project -p 8080 -d example.com -e PRO"
-  echo "  $0 -n my-project -p 8080 -d example.com -m /path/to/frontend"
+  echo "  $0 --name my-project --domain example.com"
+  echo "  $0 -n my-project -d example.com -e DEV"
+  echo "  $0 -n my-project -d example.com -e PRO"
+  echo "  $0 -n my-project -d example.com -m /path/to/frontend"
 }
 
 # Function: Parse arguments
 function parse_arguments() {
   PROJECT_NAME=""
-  PROJECT_PORT=""
+  PROJECT_PORT="80"  # Default internal port is 80
   DOMAIN_NAME=""
   FRONTEND_DIR=""
   FRONTEND_MOUNT=""
@@ -86,10 +85,6 @@ function parse_arguments() {
     handle_error "Project name is required. Use --name or -n to specify."
   fi
 
-  if [[ -z "$PROJECT_PORT" ]]; then
-    handle_error "Port is required. Use --port or -p to specify."
-  fi
-
   if [[ -z "$DOMAIN_NAME" ]]; then
     handle_error "Domain name is required. Use --domain or -d to specify."
   fi
@@ -97,11 +92,6 @@ function parse_arguments() {
   # Validate project name format
   if ! [[ "$PROJECT_NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
     handle_error "Invalid project name format: $PROJECT_NAME. Use only alphanumeric characters and hyphens."
-  fi
-
-  # Validate port number
-  if ! [[ "$PROJECT_PORT" =~ ^[0-9]+$ ]] || [ "$PROJECT_PORT" -lt 1024 ] || [ "$PROJECT_PORT" -gt 65535 ]; then
-    handle_error "Invalid port number: $PROJECT_PORT. Must be between 1024 and 65535."
   fi
 
   # Validate domain format
