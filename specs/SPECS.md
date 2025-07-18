@@ -8,7 +8,7 @@ The Microservices Nginx Architecture is designed to provide a scalable, secure, 
 
 1. **Central Nginx Proxy**: A reverse proxy that handles SSL termination, domain routing, and security features
 2. **Project Containers**: Isolated containers for each project with their own Nginx instances
-3. **Network Isolation**: Separate networks for each project with controlled communication
+3. **Internal Container Networking**: Container-to-container communication without exposed ports
 4. **Automation Scripts**: Comprehensive tooling for deployment and management
 5. **Multi-Environment Support**: Development and production environment configurations
 6. **Zero-Downtime Operations**: Incremental deployment without service disruption
@@ -23,6 +23,7 @@ The central proxy is responsible for:
 - Security headers and rate limiting
 - Bad bot blocking
 - HTTP to HTTPS redirection
+- Container name-based DNS resolution
 
 [Detailed Proxy Specification](nginx-proxy-spec.md)
 
@@ -34,6 +35,7 @@ Each project container includes:
 - Static file serving
 - Health check endpoints
 - Security hardening
+- Internal port 80 (no host port exposure)
 
 [Detailed Project Container Specification](project-container-spec.md)
 
@@ -43,7 +45,8 @@ The network architecture provides:
 - Shared proxy network for routing
 - Isolated project networks
 - Controlled communication paths
-- DNS resolution between containers
+- Container name-based DNS resolution
+- Internal container communication without port exposure
 
 [Detailed Architecture Specification](architecture-spec.md)
 
@@ -56,6 +59,7 @@ The automation scripts provide:
 - Proxy integration
 - Deployment verification
 - Zero-downtime incremental deployment
+- Internal networking setup
 
 [Detailed Script Specification](script-spec.md)
 
@@ -76,6 +80,7 @@ The Podman integration provides:
 - Reliable container networking
 - Docker compatibility layer
 - Network connectivity testing
+- Internal container communication
 
 [Detailed Podman Specification](podman-specs.md)
 
@@ -125,6 +130,7 @@ The Cloudflare integration provides:
 - Rate limiting and DDoS protection
 - Bad bot blocking
 - Network isolation between projects
+- No exposed ports for project containers
 
 ### Reliability Requirements
 
@@ -133,6 +139,7 @@ The Cloudflare integration provides:
 - Automatic recovery from failure states
 - Comprehensive health checks
 - Detailed logging and error handling
+- Container name-based DNS resolution
 
 ## Implementation Status
 
@@ -142,5 +149,6 @@ The project is currently in **PRODUCTION READY** state with all core features im
 2. **Enterprise Documentation**: Comprehensive documentation and specification suite
 3. **Script Architecture Fixes**: Fixed critical script architecture issues in the modular project creation system
 4. **Incremental Deployment System**: Zero-downtime project addition to a running ecosystem
+5. **Internal Container Networking**: Refactored architecture to use container name-based communication without exposed ports
 
 For detailed implementation status, see the [Implementation Status](../IMPLEMENTATION_STATUS.md) document.

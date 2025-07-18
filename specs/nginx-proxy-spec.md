@@ -7,6 +7,7 @@ This document specifies the configuration and functionality of the central Nginx
 
 1. **Traffic Routing**
    - Domain-based routing to appropriate project containers
+   - Container name-based DNS resolution
    - Path-based routing for specific services
    - HTTP to HTTPS redirection
    - Default handling for unknown domains
@@ -207,6 +208,9 @@ add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment
 ### Domain Configuration Template (domains/example.com.conf)
 ```nginx
 # Domain configuration for example.com
+# Generated automatically for project: example-project
+
+# HTTPS server block
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -235,9 +239,9 @@ server {
     limit_req zone=securitylimit burst=20 nodelay;
     limit_conn securityconn 20;
     
-    # Proxy to project container
+    # Proxy to project container using container name
     location / {
-        proxy_pass http://example_container;
+        proxy_pass http://example-project:80;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -249,6 +253,18 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+        
+        # Buffer settings
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+        proxy_busy_buffers_size 8k;
+    }
+    
+    # Health check endpoint
+    location /health {
+        proxy_pass http://example-project:80/health;
+        access_log off;
     }
     
     # Custom error handling
@@ -257,6 +273,19 @@ server {
         root /usr/share/nginx/html;
         internal;
     }
+}
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com www.example.com;
+    
+    # Apply rate limiting to HTTP as well
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    return 301 https://$server_name$request_uri;
 }
 ```
 
@@ -272,8 +301,8 @@ services:
       dockerfile: Dockerfile
     container_name: nginx-proxy
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./conf.d:/etc/nginx/conf.d:ro
@@ -283,19 +312,11 @@ services:
       - ./logs:/var/log/nginx
     restart: unless-stopped
     networks:
-      - proxy-network
-      - project-a-network
-      - project-b-network
-      # Additional project networks as needed
+      - nginx-proxy-network
 
 networks:
-  proxy-network:
+  nginx-proxy-network:
     driver: bridge
-  project-a-network:
-    external: true
-  project-b-network:
-    external: true
-  # Additional project networks as needed
 ```
 
 ## Dockerfile
@@ -329,6 +350,22 @@ EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]
 ```
+
+## Container Name-Based Routing
+
+The proxy uses container names for DNS resolution instead of IP addresses. This approach provides several benefits:
+
+1. **Reliability**: Container names are stable and don't change when containers restart
+2. **Simplicity**: No need to track and update IP addresses
+3. **Security**: No exposed ports required for project containers
+4. **Maintainability**: Easier to manage and troubleshoot
+
+### Routing Mechanism
+
+- Each project container is connected to the `nginx-proxy-network`
+- The proxy uses container names (e.g., `example-project`) for routing
+- DNS resolution happens automatically within the Docker network
+- No port conflicts between projects
 
 ## Cloudflare Integration
 
@@ -439,4 +476,4 @@ deny all;
    - Shared configuration through mounted volumes
    - Consistent hashing for session persistence
 
-This specification provides a comprehensive guide for implementing the central Nginx proxy component of the microservices architecture. It ensures secure, efficient, and scalable routing of traffic to individual project containers. 
+This specification provides a comprehensive guide for implementing the central Nginx proxy component of the microservices architecture. It ensures secure, efficient, and scalable routing of traffic to individual project containers using container name-based DNS resolution. 

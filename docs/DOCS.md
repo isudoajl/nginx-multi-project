@@ -70,7 +70,6 @@ The system supports adding new projects to a running ecosystem without disruptin
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name second-app \
-  --port 8091 \
   --domain second-app.com \
   --env PRO
 ```
@@ -108,4 +107,16 @@ The system includes complete podman integration for rootless container operation
 - Docker compatibility layer for seamless transition
 - Network connectivity testing
 
-For more details, see the [Podman Integration](podman-integration.md) document. 
+For more details, see the [Podman Integration](podman-integration.md) document.
+
+### Internal Container Networking
+
+The system uses container name-based communication without exposed ports:
+
+- No port conflicts between projects
+- Enhanced security through port isolation
+- Simplified container management
+- Container name-based DNS resolution
+- Internal communication without host port exposure
+
+For more details, see the [Project Container Architecture](project-container-architecture.md) document. 

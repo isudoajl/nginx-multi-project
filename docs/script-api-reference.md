@@ -13,18 +13,18 @@ Create a new project container with all necessary configuration files.
 
 Options:
   --name, -n NAME          Project name (required, alphanumeric with hyphens)
-  --port, -p PORT          Internal container port (required, 1024-65535)
   --domain, -d DOMAIN      Domain name (required, valid FQDN format)
   --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)
+  --frontend-mount, -m DIR Path to mount as frontend in container (optional, default: ./html)
   --cert, -c FILE          Path to SSL certificate (optional)
   --key, -k FILE           Path to SSL private key (optional)
   --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
   --help, -h               Display this help message
 
 Examples:
-  ./scripts/create-project-modular.sh --name my-project --port 8080 --domain example.com
-  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e DEV
-  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e PRO
+  ./scripts/create-project-modular.sh --name my-project --domain example.com
+  ./scripts/create-project-modular.sh -n my-project -d example.com -e DEV
+  ./scripts/create-project-modular.sh -n my-project -d example.com -e PRO
 ```
 
 #### create-project-modular.sh
@@ -40,18 +40,18 @@ Create a new project container with all necessary configuration files.
 
 Options:
   --name, -n NAME          Project name (required, alphanumeric with hyphens)
-  --port, -p PORT          Internal container port (required, 1024-65535)
   --domain, -d DOMAIN      Domain name (required, valid FQDN format)
   --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)
+  --frontend-mount, -m DIR Path to mount as frontend in container (optional, default: ./html)
   --cert, -c FILE          Path to SSL certificate (optional)
   --key, -k FILE           Path to SSL private key (optional)
   --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
   --help, -h               Display this help message
 
 Examples:
-  ./scripts/create-project-modular.sh --name my-project --port 8080 --domain example.com
-  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e DEV
-  ./scripts/create-project-modular.sh -n my-project -p 8080 -d example.com -e PRO
+  ./scripts/create-project-modular.sh --name my-project --domain example.com
+  ./scripts/create-project-modular.sh -n my-project -d example.com -e DEV
+  ./scripts/create-project-modular.sh -n my-project -d example.com -e PRO
 ```
 
 ### Modular Script Architecture
@@ -100,7 +100,7 @@ Set up development environment for a project.
 Options:
   --project, -p PROJECT    Project name
   --action, -a ACTION      Action to perform: setup or teardown
-  --port, -P PORT          Port to use (required for setup)
+  --port, -P PORT          Port to use (optional, default: 8080)
   --help, -h               Display this help message
 
 Examples:

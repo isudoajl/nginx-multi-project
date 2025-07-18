@@ -37,7 +37,7 @@ nix --extra-experimental-features "nix-command flakes" develop
 
 # Create a new project
 nix --extra-experimental-features "nix-command flakes" develop --command \
-./scripts/create-project-modular.sh --name my-project --domain my-project.com --port 8090 --env PRO
+./scripts/create-project-modular.sh --name my-project --domain my-project.com --env PRO
 ```
 
 ## Project Container Architecture
@@ -48,6 +48,7 @@ Each project container consists of:
 2. **Container Setup**: Container definition and networking
 3. **Static Content**: Website files and assets
 4. **Health Checks**: Monitoring endpoints
+5. **Internal Networking**: Container-to-container communication without exposed ports
 
 ## Creating a New Project
 
@@ -55,7 +56,7 @@ Each project container consists of:
 
 ```bash
 nix --extra-experimental-features "nix-command flakes" develop --command \
-./scripts/create-project-modular.sh --name PROJECT_NAME --domain DOMAIN_NAME --port PORT --env PRO
+./scripts/create-project-modular.sh --name PROJECT_NAME --domain DOMAIN_NAME --env PRO
 ```
 
 ### Required Parameters
@@ -64,7 +65,6 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 |-----------|-------------|---------|
 | `--name`, `-n` | Project name (alphanumeric with hyphens) | `--name my-project` |
 | `--domain`, `-d` | Domain name for the project | `--domain example.com` |
-| `--port`, `-p` | Internal container port (avoid 8080/8443) | `--port 8090` |
 | `--env`, `-e` | Environment (PRO only) | `--env PRO` |
 
 ### Optional Parameters
@@ -72,6 +72,7 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
 | `--frontend`, `-f` | Path to static files | `./projects/{project_name}/html` | `--frontend /path/to/files` |
+| `--frontend-mount`, `-m` | Path to mount as frontend in container | `./html` | `--frontend-mount /path/to/frontend` |
 | `--cert`, `-c` | SSL certificate path | `/etc/ssl/certs/cert.pem` | `--cert /path/to/cert.pem` |
 | `--key`, `-k` | SSL private key path | `/etc/ssl/certs/private/cert-key.pem` | `--key /path/to/key.pem` |
 
@@ -80,11 +81,11 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 ```bash
 # Create a basic production project
 nix --extra-experimental-features "nix-command flakes" develop --command \
-./scripts/create-project-modular.sh --name blog --domain blog.example.com --port 8090 --env PRO
+./scripts/create-project-modular.sh --name blog --domain blog.example.com --env PRO
 
 # Create a production project with custom frontend
 nix --extra-experimental-features "nix-command flakes" develop --command \
-./scripts/create-project-modular.sh --name shop --domain shop.example.com --port 8091 --env PRO --frontend /path/to/shop/dist
+./scripts/create-project-modular.sh --name shop --domain shop.example.com --env PRO --frontend /path/to/shop/dist
 ```
 
 ## 🧹 Fresh Environment Reset
@@ -249,10 +250,23 @@ The default health check endpoint can be customized by editing:
 
 ## Integration with Proxy
 
-Project containers are designed to work with the central Nginx proxy:
+Project containers integrate with the central nginx proxy through:
 
-1. Projects register their domains with the proxy
-2. The proxy routes traffic to the appropriate project container
-3. SSL termination happens at the proxy level
+1. **Container Name Resolution**: Uses container names for DNS resolution
+2. **Internal Networking**: No exposed ports required
+3. **Domain Routing**: Proxy routes requests based on domain names
+4. **SSL Termination**: Handled at the proxy level
 
-For more details on proxy integration, see the Nginx Proxy documentation. 
+## Security Features
+
+### Network Isolation
+
+- Project containers are isolated from each other
+- No direct external access to project containers
+- All traffic routed through the central proxy
+
+### Internal Communication
+
+- Container-to-container communication via internal networks
+- No port conflicts between projects
+- Enhanced security through port isolation 
