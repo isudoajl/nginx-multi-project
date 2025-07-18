@@ -32,6 +32,20 @@ function generate_dockerfile() {
   local project_dir="$1"
   
   log "Creating Dockerfile..."
+  
+  # Check if this is a monorepo project
+  if [[ "$IS_MONOREPO" == true ]]; then
+    generate_monorepo_dockerfile "$project_dir"
+  else
+    generate_standard_dockerfile "$project_dir"
+  fi
+}
+
+# Function: Generate standard Dockerfile (original functionality)
+function generate_standard_dockerfile() {
+  local project_dir="$1"
+  
+  log "Creating standard Dockerfile..."
   cat > "${project_dir}/Dockerfile" << EOF
 FROM nginx:alpine
 
@@ -57,11 +71,140 @@ CMD ["nginx", "-g", "daemon off;"]
 EOF
 }
 
+# Function: Generate multi-stage Dockerfile for monorepo projects
+function generate_monorepo_dockerfile() {
+  local project_dir="$1"
+  
+  log "Creating multi-stage Dockerfile for monorepo project..."
+  
+  # Determine build strategy based on Nix detection
+  if [[ "$USE_EXISTING_NIX" == true ]]; then
+    generate_nix_monorepo_dockerfile "$project_dir"
+  else
+    generate_npm_monorepo_dockerfile "$project_dir"
+  fi
+}
+
+# Function: Generate Nix-based monorepo Dockerfile
+function generate_nix_monorepo_dockerfile() {
+  local project_dir="$1"
+  
+  log "Creating Nix-based multi-stage Dockerfile..."
+  cat > "${project_dir}/Dockerfile" << EOF
+# Stage 1: Build frontend using existing Nix flake
+FROM nixos/nix:latest AS frontend-builder
+
+# Enable flakes support
+RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+
+WORKDIR /build
+
+# Copy entire monorepo (to access flake.nix and frontend directory)
+COPY . .
+
+# Build using existing flake.nix
+RUN $NIX_BUILD_CMD
+
+# Stage 2: Nginx web server
+FROM nginx:alpine
+
+WORKDIR /opt/$PROJECT_NAME
+
+# Install required packages
+RUN apk add --no-cache curl
+
+# Copy built frontend from Nix build result
+COPY --from=frontend-builder /build/result/dist /usr/share/nginx/html
+
+# Create SSL certificate directories (certificates will be mounted at runtime)
+RUN mkdir -p /etc/ssl/certs /etc/ssl/private
+
+# Create required directories and set permissions
+RUN mkdir -p /etc/nginx/conf.d \\
+    && mkdir -p /var/log/nginx \\
+    && chown -R nginx:nginx /var/log/nginx \\
+    && chown -R nginx:nginx /usr/share/nginx/html \\
+    && chmod -R 755 /var/log/nginx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
+  CMD curl -f http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
+EOF
+}
+
+# Function: Generate npm-based monorepo Dockerfile
+function generate_npm_monorepo_dockerfile() {
+  local project_dir="$1"
+  
+  log "Creating npm-based multi-stage Dockerfile..."
+  cat > "${project_dir}/Dockerfile" << EOF
+# Stage 1: Build frontend using npm
+FROM node:18-alpine AS frontend-builder
+
+WORKDIR /build
+
+# Copy package files for dependency installation
+COPY $FRONTEND_SUBDIR/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy frontend source code
+COPY $FRONTEND_SUBDIR .
+
+# Build the frontend
+RUN ${FRONTEND_BUILD_CMD:-npm run build}
+
+# Stage 2: Nginx web server
+FROM nginx:alpine
+
+WORKDIR /opt/$PROJECT_NAME
+
+# Install required packages
+RUN apk add --no-cache curl
+
+# Copy built frontend from builder stage
+COPY --from=frontend-builder /build/$BUILD_OUTPUT_DIR /usr/share/nginx/html
+
+# Create SSL certificate directories (certificates will be mounted at runtime)
+RUN mkdir -p /etc/ssl/certs /etc/ssl/private
+
+# Create required directories and set permissions
+RUN mkdir -p /etc/nginx/conf.d \\
+    && mkdir -p /var/log/nginx \\
+    && chown -R nginx:nginx /var/log/nginx \\
+    && chown -R nginx:nginx /usr/share/nginx/html \\
+    && chmod -R 755 /var/log/nginx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
+  CMD curl -f http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
+EOF
+}
+
 # Function: Generate docker-compose.yml
 function generate_docker_compose() {
   local project_dir="$1"
   
   log "Creating docker-compose.yml..."
+  
+  # Check if this is a monorepo project
+  if [[ "$IS_MONOREPO" == true ]]; then
+    generate_monorepo_docker_compose "$project_dir"
+  else
+    generate_standard_docker_compose "$project_dir"
+  fi
+}
+
+# Function: Generate standard docker-compose.yml
+function generate_standard_docker_compose() {
+  local project_dir="$1"
+  
+  log "Creating standard docker-compose.yml..."
   cat > "${project_dir}/docker-compose.yml" << EOF
 version: '3.8'
 
@@ -85,6 +228,46 @@ services:
 
 networks:
   ${PROJECT_NAME}-network:
+    external: true
+EOF
+}
+
+# Function: Generate monorepo docker-compose.yml
+function generate_monorepo_docker_compose() {
+  local project_dir="$1"
+  
+  log "Creating monorepo docker-compose.yml..."
+  cat > "${project_dir}/docker-compose.yml" << EOF
+version: '3.8'
+
+services:
+  ${PROJECT_NAME}:
+    build:
+      context: ${MONOREPO_DIR}
+      dockerfile: ${project_dir}/Dockerfile
+    container_name: ${PROJECT_NAME}
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ./logs:/var/log/nginx
+      - ./certs/cert.pem:/etc/ssl/certs/cert.pem:ro
+      - ./certs/cert-key.pem:/etc/ssl/private/cert-key.pem:ro
+    restart: unless-stopped
+    networks:
+      - ${PROJECT_NAME}-network
+      - nginx-proxy-network
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - IS_MONOREPO=true
+      - MONOREPO_DIR=${MONOREPO_DIR}
+      - FRONTEND_SUBDIR=${FRONTEND_SUBDIR}
+      - BUILD_OUTPUT_DIR=${BUILD_OUTPUT_DIR}
+
+networks:
+  ${PROJECT_NAME}-network:
+    name: ${PROJECT_NAME}-network
+  nginx-proxy-network:
     external: true
 EOF
 }

@@ -29,29 +29,12 @@ function deploy_project() {
   
   # Build and start project container
   log "Building and starting project container..."
-  cd "${project_dir}" || handle_error "Failed to change to project directory"
   
-  # Use podman-compose or docker-compose based on available container engine
-  if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
-    # Clean up any existing container with the same name
-    $CONTAINER_ENGINE rm -f "${PROJECT_NAME}" &>/dev/null || true
-    
-    # Build and run with podman directly (more reliable than podman-compose)
-    $CONTAINER_ENGINE build -t "${PROJECT_NAME}" . || handle_error "Failed to build project image"
-    $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
-      --network "${proxy_network}" \
-      -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
-      -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
-      -v "${project_dir}/html:/usr/share/nginx/html:ro" \
-      -v "${project_dir}/certs:/etc/nginx/certs:ro" \
-      -v "${project_dir}/logs:/var/log/nginx" \
-      "${PROJECT_NAME}" || handle_error "Failed to run project container"
+  # Check if this is a monorepo project
+  if [[ "$IS_MONOREPO" == true ]]; then
+    deploy_monorepo_project "$project_dir" "$proxy_network"
   else
-    docker-compose up -d --build || handle_error "Failed to start project with docker-compose"
-    
-    # Connect project container to proxy network
-    log "Connecting project container to proxy network..."
-    $CONTAINER_ENGINE network connect "${proxy_network}" "${PROJECT_NAME}" || handle_error "Failed to connect project to proxy network"
+    deploy_standard_project "$project_dir" "$proxy_network"
   fi
   
   # Wait for container to be fully ready
@@ -220,4 +203,80 @@ EOF
   fi
   
   log "Project '${PROJECT_NAME}' deployed successfully with zero-downtime incremental deployment"
+}
+
+# Function: Deploy standard project
+function deploy_standard_project() {
+  local project_dir="$1"
+  local proxy_network="$2"
+  
+  log "Deploying standard project..."
+  cd "${project_dir}" || handle_error "Failed to change to project directory"
+  
+  # Use podman-compose or docker-compose based on available container engine
+  if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
+    # Clean up any existing container with the same name
+    $CONTAINER_ENGINE rm -f "${PROJECT_NAME}" &>/dev/null || true
+    
+    # Build and run with podman directly (more reliable than podman-compose)
+    $CONTAINER_ENGINE build -t "${PROJECT_NAME}" . || handle_error "Failed to build project image"
+    $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+      --network "${proxy_network}" \
+      -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+      -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+      -v "${project_dir}/html:/usr/share/nginx/html:ro" \
+      -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+      -v "${project_dir}/logs:/var/log/nginx" \
+      "${PROJECT_NAME}" || handle_error "Failed to run project container"
+  else
+    docker-compose up -d --build || handle_error "Failed to start project with docker-compose"
+    
+    # Connect project container to proxy network
+    log "Connecting project container to proxy network..."
+    $CONTAINER_ENGINE network connect "${proxy_network}" "${PROJECT_NAME}" || handle_error "Failed to connect project to proxy network"
+  fi
+}
+
+# Function: Deploy monorepo project
+function deploy_monorepo_project() {
+  local project_dir="$1"
+  local proxy_network="$2"
+  
+  log "Deploying monorepo project..."
+  log "Monorepo directory: $MONOREPO_DIR"
+  log "Build context: $MONOREPO_DIR"
+  log "Dockerfile location: $project_dir/Dockerfile"
+  
+  # Use podman-compose or docker-compose based on available container engine
+  if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
+    # Clean up any existing container with the same name
+    $CONTAINER_ENGINE rm -f "${PROJECT_NAME}" &>/dev/null || true
+    
+    # Build from monorepo context with dockerfile in project directory
+    log "Building monorepo project image..."
+    $CONTAINER_ENGINE build \
+      -f "${project_dir}/Dockerfile" \
+      -t "${PROJECT_NAME}" \
+      "${MONOREPO_DIR}" || handle_error "Failed to build monorepo project image"
+    
+    # Run container with monorepo-specific volume mappings (no html volume)
+    log "Starting monorepo project container..."
+    $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+      --network "${proxy_network}" \
+      -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+      -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+      -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+      -v "${project_dir}/logs:/var/log/nginx" \
+      "${PROJECT_NAME}" || handle_error "Failed to run monorepo project container"
+  else
+    # For docker-compose, change to project directory but use monorepo context
+    cd "${project_dir}" || handle_error "Failed to change to project directory"
+    docker-compose up -d --build || handle_error "Failed to start monorepo project with docker-compose"
+    
+    # Connect project container to proxy network
+    log "Connecting project container to proxy network..."
+    $CONTAINER_ENGINE network connect "${proxy_network}" "${PROJECT_NAME}" || handle_error "Failed to connect project to proxy network"
+  fi
+  
+  log "Monorepo project deployment completed"
 } 

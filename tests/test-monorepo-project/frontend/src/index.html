@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Monorepo Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .feature {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        .success {
+            background: rgba(40, 167, 69, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Nginx Multi-Project Monorepo Test</h1>
+        
+        <div class="status success">
+            <h2>✅ Deployment Status: SUCCESS</h2>
+            <p>This page confirms that the monorepo deployment is working correctly!</p>
+        </div>
+        
+        <div class="feature">
+            <h3>📦 Monorepo Features Tested:</h3>
+            <ul>
+                <li>✅ Nix flake configuration detected</li>
+                <li>✅ Frontend build process executed</li>
+                <li>✅ Multi-stage Docker build completed</li>
+                <li>✅ Nginx reverse proxy integration</li>
+                <li>✅ SSL/HTTPS configuration</li>
+                <li>✅ Container networking established</li>
+            </ul>
+        </div>
+        
+        <div class="feature">
+            <h3>🏗️ Architecture Validation:</h3>
+            <ul>
+                <li>✅ Central nginx-proxy container running</li>
+                <li>✅ Project container deployed</li>
+                <li>✅ Internal container networking functional</li>
+                <li>✅ Domain-based routing working</li>
+                <li>✅ SSL certificates properly configured</li>
+            </ul>
+        </div>
+        
+        <div class="status">
+            <h3>🔧 Technical Details:</h3>
+            <p><strong>Project Type:</strong> Monorepo Frontend</p>
+            <p><strong>Build System:</strong> Nix + npm</p>
+            <p><strong>Deployment:</strong> Docker Multi-Stage</p>
+            <p><strong>Proxy:</strong> Nginx Reverse Proxy</p>
+            <p><strong>Environment:</strong> Development/Production Ready</p>
+        </div>
+        
+        <div class="feature">
+            <p><em>If you can see this page, the nginx-multi-project monorepo integration is working perfectly! 🎉</em></p>
+        </div>
+    </div>
+    
+    <script>
+        // Add some interactivity to show the frontend is fully functional
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Test monorepo frontend loaded successfully!');
+            
+            // Add current timestamp
+            const timestamp = document.createElement('div');
+            timestamp.style.textAlign = 'center';
+            timestamp.style.marginTop = '20px';
+            timestamp.style.fontSize = '14px';
+            timestamp.style.opacity = '0.8';
+            timestamp.innerHTML = `<p>Page loaded: ${new Date().toLocaleString()}</p>`;
+            document.querySelector('.container').appendChild(timestamp);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  {{PROJECT_NAME}}:
+    # Development-specific overrides
+    volumes:
+      # Add volume for live reloading (if html directory exists)
+      - ./html:/usr/share/nginx/html:ro
+      # Mount development configuration if available
+      - ./conf.d:/etc/nginx/conf.d:ro
+    environment:
+      # Development environment variables
+      - ENVIRONMENT=development
+      - PROJECT_NAME={{PROJECT_NAME}}
+      - DOMAIN_NAME={{DOMAIN_NAME}}
+    # Development-specific healthcheck with shorter intervals
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    # Development-specific restart policy
+    restart: unless-stopped
+    # Add development labels
+    labels:
+      - "dev.environment=true"
+      - "dev.project={{PROJECT_NAME}}"
+      - "dev.domain={{DOMAIN_NAME}}"
+
+networks:
+  {{PROJECT_NAME}}-network:
+    driver: bridge
+  nginx-proxy-network:
+    external: true

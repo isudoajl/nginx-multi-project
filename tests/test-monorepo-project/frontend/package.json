@@ -1,0 +1,13 @@
+{
+  "name": "test-frontend",
+  "version": "1.0.0",
+  "description": "Test frontend for monorepo validation",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p dist && cp -r src/* dist/",
+    "dev": "echo 'Starting development server...'",
+    "start": "npm run build"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
