@@ -17,6 +17,7 @@ This document outlines the architecture for transforming the current monolithic 
    - Routes requests to appropriate project containers
    - Handles SSL termination at the edge
    - Implements shared security policies
+   - Uses IP-based routing for reliable connectivity
 
 2. **Project-Specific Nginx Containers**
    - One container per project/domain
@@ -29,11 +30,13 @@ This document outlines the architecture for transforming the current monolithic 
    - Centralized management of containers
    - Zero-downtime deployments
    - Health monitoring and automatic recovery
+   - Network connectivity verification
 
 4. **Certificate Management**
    - Flexible certificate location with sensible defaults
    - Support for both development (self-signed) and production certificates
    - Centralized or distributed certificate storage options
+   - Domain-specific certificate mounting
 
 ## Network Architecture
 
@@ -89,6 +92,8 @@ Each project container operates on its own isolated network, with the proxy cont
 - **Dual Network Membership**: Each project connects to both shared proxy network and isolated project network
 - **Zero-Downtime Integration**: New projects can be added without disrupting existing services
 - **Dynamic Network Management**: Automatic network creation and connection during deployment
+- **IP-Based Routing**: Using container IP addresses for reliable proxy_pass directives
+- **Network Connectivity Verification**: Pre-deployment verification of container connectivity
 
 ## Security Architecture
 
@@ -133,6 +138,7 @@ Each project container operates on its own isolated network, with the proxy cont
    - Container status monitoring
    - Endpoint availability checks
    - Certificate expiration monitoring
+   - Network connectivity verification
 
 2. **Logging**
    - Centralized log collection
@@ -155,6 +161,7 @@ Each project container operates on its own isolated network, with the proxy cont
    - Container recreation
    - Configuration restoration
    - Rollback capabilities
+   - Self-healing infrastructure
 
 ## Integration Points
 
@@ -187,11 +194,22 @@ Each project container operates on its own isolated network, with the proxy cont
 3. **Dynamic Integration**: Seamless addition of new projects to running ecosystem
 4. **Hot Configuration Updates**: Live proxy configuration reloading without downtime
 5. **Comprehensive Verification**: End-to-end testing of new project integration
+6. **IP-Based Routing**: Using container IP addresses for reliable proxy_pass directives
+7. **Network Connectivity Verification**: Pre-deployment verification of container connectivity
 
 **Deployment Capabilities:**
 - **From-Scratch**: Complete infrastructure creation when no proxy exists
 - **Incremental**: Adding projects to existing ecosystem without disruption
 - **Self-Healing**: Automatic recovery from partial failures
 - **Zero-Downtime**: Service continuity maintained throughout deployment process
+
+## Critical Bug Fixes
+
+1. **IP Address Detection Bug**: Fixed issue with concatenated network IP addresses in proxy_pass directives
+2. **Network Name Template Parsing Bug**: Resolved podman inspect template parsing failures with network names containing hyphens
+3. **Nginx Configuration Structure Bug**: Added proper nginx.conf structure with user, events, and http directives
+4. **SSL Certificate Security Vulnerability**: Added comprehensive .gitignore for certificate files to prevent exposure
+5. **Critical Incremental Deployment Failures**: Implemented comprehensive improvements to deployment process for zero-downtime operations
+6. **Certificate Mounting Failures**: Fixed script to properly copy domain-specific certificates to proxy/certs/ directory
 
 This architecture ensures complete project isolation, eliminates single points of failure, provides production-grade security, and enables seamless scalability while maintaining ease of deployment and management. The incremental deployment system now supports enterprise-grade operations with zero-downtime project additions to existing ecosystems. 

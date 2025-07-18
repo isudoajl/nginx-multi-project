@@ -1,120 +1,111 @@
-# 📚 Nginx Multi-Project Architecture - Documentation Overview
+# Microservices Nginx Architecture - Documentation
 
-## 🎯 Project Status: ✅ **PRODUCTION READY**
+This document provides a comprehensive overview of the documentation available for the Microservices Nginx Architecture project. The documentation is organized by user role and use case to help you find the information you need quickly.
 
-Complete, enterprise-grade container orchestration system with revolutionary **zero-downtime incremental deployment** capabilities. All core features implemented and battle-tested as of 2025-06-23.
+## Quick Start
 
-## 📖 Documentation Index
+- [README.md](../README.md) - Project overview and quick start guide
+- [Deployment Guide](deployment-guide.md) - Step-by-step deployment instructions
+- [Project Container Guide](project-container-guide.md) - Guide for creating and managing project containers
 
-| Category | Document | Description | Status | Last Updated |
-|----------|----------|-------------|--------|--------------|
-| **📋 Getting Started** | [README.md](README.md) | Main project overview and quick start guide | ✅ Current | 2025-06-23 |
-| **🚀 Deployment** | [deployment-guide.md](deployment-guide.md) | Comprehensive deployment scenarios and workflows | ✅ Current | 2025-06-23 |
-| **⚙️ How It Works** | [how-it-works.md](how-it-works.md) | Technical architecture and system operation | ✅ Current | 2025-06-23 |
-| **📊 Project Overview** | [project-overview.md](project-overview.md) | Executive summary and implementation status | ✅ Current | 2025-06-23 |
-| **👨‍💻 User Guides** | [project-container-guide.md](project-container-guide.md) | User guide for project creation and management | ✅ Current | 2024-07-01 |
-| **🏗️ Architecture** | [project-container-architecture.md](project-container-architecture.md) | Deep dive into container architecture | ✅ Current | 2024-07-01 |
-| **📜 API Reference** | [script-api-reference.md](script-api-reference.md) | Automation script documentation and API | ✅ Current | 2024-07-01 |
-| **🚨 Troubleshooting** | [troubleshooting-guide.md](troubleshooting-guide.md) | Common issues and debugging procedures | ✅ Current | 2025-06-23 |
-| **🌐 Production Setup** | [production-port-forwarding.md](production-port-forwarding.md) | Production deployment and port configuration | ✅ Current | 2024-07-01 |
-| **🔧 System Setup** | [unprivileged-ports-setup.md](unprivileged-ports-setup.md) | Linux system configuration for port binding | ✅ Current | 2024-07-01 |
+## User Guides
 
-## 🎯 Documentation by Use Case
+### For System Administrators
 
-### 🚀 **First Time Users**
-1. Start with [README.md](README.md) - Project overview and quick start
-2. Follow [deployment-guide.md](deployment-guide.md) - Complete deployment walkthrough
-3. Read [how-it-works.md](how-it-works.md) - Understand the architecture
+- [Project Overview](project-overview.md) - Complete project summary and capabilities
+- [Deployment Guide](deployment-guide.md) - From-scratch and incremental deployment scenarios
+- [Production Port Forwarding](production-port-forwarding.md) - Setting up port forwarding for production
+- [Troubleshooting Guide](troubleshooting-guide.md) - Common issues and debugging
+- [Unprivileged Ports Setup](unprivileged-ports-setup.md) - Setting up unprivileged ports
 
-### 👨‍💻 **Developers**
-1. [project-container-guide.md](project-container-guide.md) - User guide for daily operations
-2. [script-api-reference.md](script-api-reference.md) - Script automation reference
-3. [troubleshooting-guide.md](troubleshooting-guide.md) - Debug common issues
+### For Developers
 
-### 🏗️ **Architects & DevOps**
-1. [project-container-architecture.md](project-container-architecture.md) - Technical architecture
-2. [production-port-forwarding.md](production-port-forwarding.md) - Production deployment
-3. [unprivileged-ports-setup.md](unprivileged-ports-setup.md) - System configuration
+- [Project Container Guide](project-container-guide.md) - User guide for project creation
+- [Project Container Architecture](project-container-architecture.md) - Technical implementation details
+- [How It Works](how-it-works.md) - Technical architecture explanation
+- [Podman Integration](podman-integration.md) - Podman setup and configuration
+- [Git Workflow](git-workflow.md) - Git workflow for the project
 
-### 🎉 **Latest Features (2025-06-23)**
-- **Incremental Deployment System**: Zero-downtime project addition - See [deployment-guide.md](deployment-guide.md)
-- **Enhanced Troubleshooting**: Advanced debugging procedures - See [troubleshooting-guide.md](troubleshooting-guide.md)
-- **Production-Grade Documentation**: Complete enterprise documentation suite
+### For DevOps Engineers
 
-## 🛠️ Current Tech Stack
+- [Script API Reference](script-api-reference.md) - Automation script documentation
+- [Deployment Guide](deployment-guide.md) - From-scratch and incremental deployment scenarios
+- [Podman Integration](podman-integration.md) - Podman setup and configuration
+- [Production Port Forwarding](production-port-forwarding.md) - Setting up port forwarding for production
 
-### **✅ Confirmed Active Technologies**
-| Technology | Purpose | Status | Documentation Coverage |
-|------------|---------|--------|----------------------|
-| **Nix** | Development environment & reproducibility | ✅ Active | Comprehensive |
-| **Podman** | Container engine (preferred) | ✅ Active | Complete |
-| **Docker** | Container engine (fallback support) | ✅ Supported | Mixed references |
-| **Nginx** | Web server & proxy | ✅ Active | Comprehensive |
-| **Docker Compose** | Container orchestration format | ✅ Active | Complete |
-| **OpenSSL** | SSL/TLS certificate management | ✅ Active | Complete |
-| **Bash** | Automation scripting | ✅ Active | Complete |
+## Technical Documentation
 
-### **📋 Documentation Quality Status**
+- [Project Container Architecture](project-container-architecture.md) - Technical implementation details
+- [How It Works](how-it-works.md) - Technical architecture explanation
+- [Script API Reference](script-api-reference.md) - Automation script documentation
 
-#### ✅ **Current & Accurate**
-- All Nix development environment references
-- Podman commands and workflows  
-- Container orchestration with docker-compose files
-- SSL/TLS certificate management (hardcoded cert.pem and cert-key.pem)
-- Production deployment procedures
-- Incremental deployment system
-- Fresh environment reset capabilities
+## Environment-Specific Documentation
 
-#### ⚠️ **Mixed References (Acceptable)**
-- Docker vs Podman commands (scripts support both)
-- Some legacy approaches marked as deprecated in [production-port-forwarding.md](production-port-forwarding.md)
+### Development Environment
 
-#### ✅ **No Outdated Technology Found**
-- All documented technologies are actively used in the codebase
-- No deprecated or removed technologies in current documentation
-- Legacy approaches are clearly marked as deprecated where appropriate
+- [Unprivileged Ports Setup](unprivileged-ports-setup.md) - Setting up unprivileged ports
+- [Project Container Guide](project-container-guide.md) - User guide for project creation
 
-## 📚 Related Documentation
+### Production Environment
 
-### **📋 Technical Specifications**
-- [Architecture Specifications](../specs/SPECS.md) - Complete technical specifications
-- [Nginx Proxy Spec](../specs/nginx-proxy-spec.md) - Proxy component specification
-- [Project Container Spec](../specs/project-container-spec.md) - Container specification
-- [Script Automation Spec](../specs/script-spec.md) - Automation specifications
+- [Production Port Forwarding](production-port-forwarding.md) - Setting up port forwarding for production
+- [Deployment Guide](deployment-guide.md) - From-scratch and incremental deployment scenarios
 
-### **📊 Implementation Tracking**
-- [Implementation Status](../IMPLEMENTATION_STATUS.md) - Comprehensive milestone tracking
+## Troubleshooting
 
-## 🎯 Quick Navigation
+- [Troubleshooting Guide](troubleshooting-guide.md) - Common issues and debugging
 
-### **I want to...**
-- **🚀 Get started quickly** → [README.md](README.md) → [deployment-guide.md](deployment-guide.md)
-- **👨‍💻 Create a new project** → [project-container-guide.md](project-container-guide.md)
-- **🔧 Understand the architecture** → [how-it-works.md](how-it-works.md) → [project-container-architecture.md](project-container-architecture.md)
-- **🚨 Fix an issue** → [troubleshooting-guide.md](troubleshooting-guide.md)
-- **🌐 Deploy to production** → [production-port-forwarding.md](production-port-forwarding.md)
-- **📜 Automate with scripts** → [script-api-reference.md](script-api-reference.md)
-- **⚙️ Configure system ports** → [unprivileged-ports-setup.md](unprivileged-ports-setup.md)
-- **🧹 Reset environment** → [fresh-restart.sh script](../scripts/fresh-restart.sh) for clean testing
+## Technical Specifications
 
-## 🏆 Documentation Standards
+For detailed technical specifications, please refer to the [specs](../specs/SPECS.md) directory.
 
-### **✅ All Documentation Follows**
-- Consistent markdown formatting
-- Clear step-by-step procedures
-- Working code examples
-- Current technology references
-- Production-ready guidance
-- Comprehensive troubleshooting
+## Key Features Documentation
 
-### **📈 Documentation Metrics**
-- **Coverage**: 100% of system components documented
-- **Accuracy**: All examples tested and verified
-- **Completeness**: From beginner to expert guidance
-- **Currency**: Updated with latest features (2025-06-23)
+### Zero-Downtime Incremental Deployment
 
-The **Nginx Multi-Project Architecture** provides enterprise-grade documentation covering every aspect of the system, from initial setup to advanced production deployments with zero-downtime operations! 🎯
+The system supports adding new projects to a running ecosystem without disrupting existing services:
 
----
+```bash
+# Incremental deployment - existing projects remain untouched
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name second-app \
+  --port 8091 \
+  --domain second-app.com \
+  --env PRO
+```
 
-*Last Updated: 2025-06-23 | Total Documents: 10 | Status: Production Ready ✅* 
+For more details, see the [Deployment Guide](deployment-guide.md).
+
+### Self-Healing Infrastructure
+
+The system includes self-healing capabilities that automatically recover from failure states:
+
+- Automatic proxy detection (running/stopped/missing)
+- Self-healing proxy creation from scratch
+- Network orchestration and SSL certificate management
+- Comprehensive health verification and integration testing
+
+For more details, see the [How It Works](how-it-works.md) document.
+
+### Multi-Environment Support
+
+The system supports both development and production environments:
+
+- Development environment with local DNS and self-signed certificates
+- Production environment with Cloudflare integration
+- Environment-specific configurations
+- Seamless switching between environments
+
+For more details, see the [Deployment Guide](deployment-guide.md).
+
+### Podman Integration
+
+The system includes complete podman integration for rootless container operation:
+
+- Rootless container operation without root privileges
+- Container networking with reliable communication
+- Docker compatibility layer for seamless transition
+- Network connectivity testing
+
+For more details, see the [Podman Integration](podman-integration.md) document. 

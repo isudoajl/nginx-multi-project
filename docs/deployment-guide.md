@@ -478,3 +478,163 @@ podman port nginx-proxy
 - **Testing**: Use temporary project names and clean up after testing
 
 The Microservices Nginx Architecture deployment system provides enterprise-grade deployment capabilities with the simplicity of single-command execution, supporting both greenfield deployments and seamless integration with existing infrastructure! 🚀 
+
+## Cloudflare Integration
+
+### Setting Up Cloudflare with SSL
+
+For production deployments with Cloudflare, proper SSL configuration is critical to avoid handshake failures.
+
+#### 1. Cloudflare SSL/TLS Settings
+
+In your Cloudflare dashboard:
+
+1. Go to **SSL/TLS** tab
+2. Set SSL/TLS encryption mode to **Full** (not Flexible)
+3. Under **Edge Certificates**, ensure **Always Use HTTPS** is enabled
+4. Under **Edge Certificates**, set **Minimum TLS Version** to TLS 1.2
+
+#### 2. Verify Domain Configuration
+
+Ensure your domain configuration in the proxy includes all required components for successful SSL handshakes:
+
+```bash
+# Check existing domain configuration
+cat proxy/conf.d/domains/<your-domain>.conf
+```
+
+The configuration must include:
+- SSL certificate paths
+- SSL settings include
+- Security headers include
+- Security rules for bot protection
+- Rate limiting directives
+- Proper HTTP to HTTPS redirect
+
+#### 3. Complete Domain Configuration Example
+
+If your domain configuration is missing any components, update it to match this structure:
+
+```nginx
+# Domain configuration for example.com
+# Generated automatically for project: example-project
+
+# HTTPS server block
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name example.com www.example.com;
+    
+    # SSL certificates
+    ssl_certificate /etc/nginx/certs/example.com/cert.pem;
+    ssl_certificate_key /etc/nginx/certs/example.com/cert-key.pem;
+    
+    # Include SSL settings
+    include /etc/nginx/conf.d/ssl-settings.conf;
+    
+    # Include security headers
+    include /etc/nginx/conf.d/security-headers.conf;
+    
+    # Security rules from variables defined in security-headers.conf
+    if ($bad_bot = 1) {
+        return 444;
+    }
+
+    if ($method_allowed = 0) {
+        return 444;
+    }
+    
+    # Apply rate limiting
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    # Proxy to project container
+    location / {
+        proxy_pass http://example-project:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Buffer settings
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+        proxy_busy_buffers_size 8k;
+    }
+    
+    # Health check endpoint
+    location /health {
+        proxy_pass http://example-project:80/health;
+        access_log off;
+    }
+    
+    # Custom error handling
+    error_page 502 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+        internal;
+    }
+}
+
+# HTTP redirect to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com www.example.com;
+    
+    # Apply rate limiting to HTTP as well
+    limit_req zone=securitylimit burst=20 nodelay;
+    limit_conn securityconn 20;
+    
+    return 301 https://$server_name$request_uri;
+}
+```
+
+#### 4. Reload Proxy Configuration
+
+After updating the domain configuration:
+
+```bash
+# Test configuration
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -t
+
+# Reload if test passes
+nix --extra-experimental-features "nix-command flakes" develop --command podman exec nginx-proxy nginx -s reload
+```
+
+#### 5. Verify SSL Handshake
+
+Test the SSL handshake between Cloudflare and your origin server:
+
+```bash
+# Test direct connection (should work)
+curl -I -k https://<your-server-ip>:8443 -H "Host: <your-domain>"
+
+# Test through Cloudflare (should also work)
+curl -I https://<your-domain>
+```
+
+If you see SSL handshake failures in Cloudflare (Error 525), review your domain configuration to ensure it includes all the required components.
+
+### Common Cloudflare SSL Issues
+
+1. **SSL Handshake Failures (Error 525)**
+   - **Cause**: Incomplete domain configuration missing critical SSL components
+   - **Solution**: Update domain configuration with complete SSL settings
+
+2. **Connection Timeout (Error 522)**
+   - **Cause**: Missing port forwarding from standard ports to container ports
+   - **Solution**: Set up port forwarding as described in the prerequisites
+
+3. **SSL Certificate Issues (Error 526)**
+   - **Cause**: Invalid or expired SSL certificate
+   - **Solution**: Update certificates and ensure proper paths in configuration 

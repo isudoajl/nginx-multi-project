@@ -121,14 +121,53 @@ podman network create nginx-proxy-network
 # Connect containers to the network
 podman run --network nginx-proxy-network ...
 
-# Get container IP address
+# Get container IP address - UPDATED with more reliable method
 container_ip=$(podman inspect "${PROJECT_NAME}" | grep -A 20 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
 
 # Use IP address in proxy configuration
 proxy_pass http://${container_ip}:80;
 ```
 
-### 4. Volume Mounting
+### 4. Network Connectivity Verification
+
+#### Requirements
+
+- Must verify connectivity between proxy and project containers before updating proxy configuration
+- Must provide fallback verification methods if primary method fails
+- Must prevent proxy configuration updates if connectivity cannot be verified
+
+#### Implementation
+
+```bash
+# Verify network connectivity between proxy and project container
+log "Verifying network connectivity between proxy and project container..."
+local connectivity_verified=false
+local max_connectivity_attempts=5
+local connectivity_attempt=0
+
+while [[ "$connectivity_verified" == "false" && $connectivity_attempt -lt $max_connectivity_attempts ]]; do
+  if $CONTAINER_ENGINE exec nginx-proxy curl -s --max-time 5 -f "http://${container_ip}:80/health" > /dev/null 2>&1; then
+    connectivity_verified=true
+    log "Network connectivity verified successfully"
+  else
+    log "Connectivity attempt $((connectivity_attempt + 1)): Waiting for container to be reachable..."
+    sleep 3
+    ((connectivity_attempt++))
+  fi
+done
+
+if [[ "$connectivity_verified" == "false" ]]; then
+  # Try alternative verification method - just check if container is reachable
+  if $CONTAINER_ENGINE exec nginx-proxy ping -c 1 "${container_ip}" > /dev/null 2>&1; then
+    log "Network connectivity verified via ping (HTTP service may not be ready yet)"
+    connectivity_verified=true
+  else
+    handle_error "Failed to verify network connectivity between proxy and project container after ${max_connectivity_attempts} attempts"
+  fi
+fi
+```
+
+### 5. Volume Mounting
 
 #### Requirements
 
@@ -151,7 +190,7 @@ podman run -d \
   nginx:alpine
 ```
 
-### 5. Project Creation and Deployment
+### 6. Project Creation and Deployment
 
 #### Requirements
 
@@ -162,6 +201,8 @@ podman run -d \
 - Must configure networking
 - Must update proxy configuration
 - Must verify deployment
+- Must verify network connectivity before updating proxy configuration
+- Must use IP-based routing for reliable proxy_pass directives
 
 #### Implementation
 
@@ -201,6 +242,38 @@ deploy_project
 verify_deployment
 ```
 
+### 7. Certificate Management
+
+#### Requirements
+
+- Must support both development and production certificates
+- Must handle domain-specific certificates
+- Must properly copy certificates to proxy container
+- Must ensure proper permissions for certificate files
+
+#### Implementation
+
+```bash
+# Copy domain-specific certificates to proxy certs directory
+log "Copying domain-specific certificates to proxy..."
+local proxy_certs_dir="${PROJECT_ROOT}/proxy/certs"
+local domain_certs_source="${CERTS_DIR}/${DOMAIN_NAME}"
+local domain_certs_dest="${proxy_certs_dir}/${DOMAIN_NAME}"
+
+# Ensure proxy certs directory exists
+mkdir -p "${proxy_certs_dir}"
+
+# Copy domain-specific certificates to proxy
+if [[ -d "${domain_certs_source}" ]]; then
+  mkdir -p "${domain_certs_dest}"
+  cp "${domain_certs_source}/cert.pem" "${domain_certs_dest}/cert.pem" || handle_error "Failed to copy cert.pem to proxy"
+  cp "${domain_certs_source}/cert-key.pem" "${domain_certs_dest}/cert-key.pem" || handle_error "Failed to copy cert-key.pem to proxy"
+  log "Domain-specific certificates copied to proxy successfully"
+else
+  handle_error "Domain-specific certificate directory not found: ${domain_certs_source}"
+fi
+```
+
 ## Testing
 
 ### Network Connectivity Testing
@@ -225,6 +298,18 @@ podman exec nginx-proxy nginx -t
 
 # Test proxy accessibility
 curl -s --max-time 10 -H "Host: ${DOMAIN_NAME}" "http://localhost:8080" | grep -q "301"
+```
+
+### IP Address Detection Testing
+
+```bash
+# Test IP address detection
+container_ip=$(podman inspect "${PROJECT_NAME}" | grep -A 20 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
+echo "Container IP: ${container_ip}"
+if [[ -z "${container_ip}" || "${container_ip}" == *"."* ]]; then
+  echo "IP address detection failed"
+  exit 1
+fi
 ```
 
 ## Cleanup

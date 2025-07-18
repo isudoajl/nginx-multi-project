@@ -11,6 +11,8 @@ The project uses podman as a container engine for running nginx proxy and projec
 3. Volume mounting for configuration and certificates
 4. Automatic network creation and container connectivity
 5. Docker compatibility layer
+6. IP-based routing for reliable proxy_pass directives
+7. Network connectivity verification
 
 ## Key Components
 
@@ -42,6 +44,8 @@ The project creation and deployment process is handled by `scripts/create-projec
 4. Creates and starts containers
 5. Configures networking
 6. Updates proxy configuration
+7. Verifies network connectivity
+8. Uses IP-based routing for reliable proxy_pass directives
 
 ## Usage
 
@@ -103,6 +107,31 @@ Container networking is implemented using:
 - IP address-based proxy_pass directives to avoid DNS resolution issues
 - Network connectivity verification before updating proxy configuration
 
+### IP-Based Routing
+
+To avoid DNS resolution issues in container networks, the system now uses:
+- Direct container IP address detection from the proxy network
+- IP-based proxy_pass directives instead of hostname-based ones
+- Pre-deployment connectivity verification between containers
+
+The implementation extracts container IP addresses using:
+```bash
+container_ip=$($CONTAINER_ENGINE inspect "${PROJECT_NAME}" | grep -A 20 "\"${proxy_network}\"" | grep '"IPAddress"' | head -1 | sed 's/.*"IPAddress": "\([^"]*\)".*/\1/')
+```
+
+### Network Connectivity Verification
+
+Before updating the proxy configuration, the system verifies connectivity:
+```bash
+# Verify network connectivity between proxy and project container
+$CONTAINER_ENGINE exec nginx-proxy curl -s --max-time 5 -f "http://${container_ip}:80/health"
+```
+
+If the HTTP health check fails, it falls back to a ping test:
+```bash
+$CONTAINER_ENGINE exec nginx-proxy ping -c 1 "${container_ip}"
+```
+
 ### Volume Mounting
 
 Configuration files and certificates are mounted into containers using:
@@ -117,6 +146,8 @@ Configuration files and certificates are mounted into containers using:
 2. **Certificate errors**: Ensure certificates exist in the correct location and are properly mounted.
 3. **Proxy configuration errors**: Check nginx configuration with `podman exec nginx-proxy nginx -t`.
 4. **Permission issues**: Ensure rootless podman is properly set up with `./scripts/setup-podman.sh`.
+5. **DNS resolution failures**: The system now uses IP-based routing to avoid DNS issues.
+6. **Network name template parsing errors**: Fixed with grep-based IP extraction.
 
 ### Logs
 

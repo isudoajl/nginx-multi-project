@@ -1,196 +1,263 @@
-# Nginx Multi-Project: How It Works
+# How It Works - Microservices Nginx Architecture
 
-## Architecture Overview
+This document explains the technical architecture and operation of the Microservices Nginx Architecture.
 
-The Nginx Multi-Project system is a container-based architecture designed to host multiple web applications with isolated environments while providing centralized SSL termination and routing. The system consists of two main components:
+## System Overview
 
-1. **Central Nginx Proxy Container**: Handles SSL termination, routing, and security
-2. **Project Containers**: Individual isolated nginx containers for each project/website
+The Microservices Nginx Architecture is designed to provide a scalable, secure, and maintainable infrastructure for hosting multiple isolated web applications using Nginx and container technology. The system consists of:
 
-## Network Topology
+1. **Central Nginx Proxy**: A reverse proxy that handles SSL termination, domain routing, and security features
+2. **Project Containers**: Isolated containers for each project with their own Nginx instances
+3. **Network Isolation**: Separate networks for each project with controlled communication
+4. **Automation Scripts**: Comprehensive tooling for deployment and management
+
+## Architecture Components
+
+### 1. Central Nginx Proxy
+
+The central proxy container (`nginx-proxy`) serves as the entry point for all external traffic. It:
+
+- Listens on ports 8080 (HTTP) and 8443 (HTTPS)
+- Terminates SSL/TLS connections
+- Routes traffic to the appropriate project container based on the domain name
+- Applies security headers and rate limiting
+- Blocks malicious bots and unusual HTTP methods
+- Redirects HTTP to HTTPS
 
 ```
-┌───────────────┐     ┌────────────────┐
-│ External User │────▶│ Ports 80/443   │
-└───────────────┘     │ (forwarded to  │
-                      │ 8080/8443)     │
-                      └────────┬───────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────┐
-│ nginx-proxy Container                        │
-│ - SSL termination                            │
-│ - Domain-based routing                       │
-│ - Security headers                           │
-│ - Rate limiting                              │
-└─────────────────┬────────────────────────────┘
-                  │
-                  │ nginx-proxy-network (shared)
-     ┌────────────┼────────────────┬────────────┐
-     │            │                │            │
-     ▼            ▼                ▼            ▼
-┌──────────┐ ┌──────────┐    ┌──────────┐ ┌──────────┐
-│ Project1 │ │ Project2 │... │ Project3 │ │ Project4 │
-└────┬─────┘ └────┬─────┘    └────┬─────┘ └────┬─────┘
-     │            │                │            │
-     ▼            ▼                ▼            ▼
-┌──────────┐ ┌──────────┐    ┌──────────┐ ┌──────────┐
-│Project1- │ │Project2- │    │Project3- │ │Project4- │
-│network   │ │network   │    │network   │ │network   │
-│(isolated)│ │(isolated)│    │(isolated)│ │(isolated)│
-└──────────┘ └──────────┘    └──────────┘ └──────────┘
+┌─────────────────────────────────────┐
+│           nginx-proxy               │
+│                                     │
+│  ┌─────────────┐    ┌─────────────┐ │
+│  │    HTTP     │    │    HTTPS    │ │
+│  │  (8080)     │    │   (8443)    │ │
+│  └─────────────┘    └─────────────┘ │
+│            │              │         │
+│            └──────────────┘         │
+│                   │                 │
+└───────────────────┼─────────────────┘
+                    │
+                    ▼
+          Domain-based Routing
 ```
-
-## Key Components
-
-### 1. Proxy Container
-
-- **Container Name**: `nginx-proxy`
-- **Ports**: 8080 (HTTP) and 8443 (HTTPS)
-- **Networks**: Connected to `nginx-proxy-network` (shared with all projects)
-- **Configuration**: 
-  - `/proxy/nginx.conf`: Main configuration
-  - `/proxy/conf.d/domains/*.conf`: Domain-specific routing
-  - `/proxy/conf.d/security-headers.conf`: Security settings
-  - `/proxy/conf.d/ssl-settings.conf`: SSL/TLS configuration
 
 ### 2. Project Containers
 
-- **Container Name**: Project name (e.g., `mapa-kms`)
-- **Ports**: Internal port 80 (exposed as configured port)
-- **Networks**: Connected to both:
-  - `nginx-proxy-network` (shared with proxy)
-  - Project-specific network (isolated)
-- **Configuration**:
-  - Custom nginx configuration
-  - Project-specific security settings
-  - Health check endpoint at `/health`
+Each project runs in its own isolated container with:
 
-### 3. Certificate Management
+- Its own Nginx instance listening on port 80
+- Project-specific configuration
+- Static file serving
+- Health check endpoints
+- Security hardening
 
-- **Certificates**: Generic certificates in `/certs/`, domain-specific copies in `/certs/{domain}/`
-- **Integration**: Certificate workflow:
-  1. Generic certificates stored in `/opt/nginx-multi-project/certs/`
-  2. Script creates domain-specific directory `/opt/nginx-multi-project/certs/{domain}/`
-  3. Copies generic certificates to domain-specific directory for new projects
-  4. Both project containers and proxy use domain-specific certificates
-
-## Deployment Process
-
-### 1. Pre-deployment Cleanup
-
-```bash
-# Clean stale domain configs
-rm -f proxy/conf.d/domains/*.conf
-
-# Stop and remove any crashed proxy containers
-podman stop nginx-proxy && podman rm nginx-proxy
+```
+┌─────────────────────────────────────┐
+│           project-container         │
+│                                     │
+│  ┌─────────────┐    ┌─────────────┐ │
+│  │    Nginx    │    │   Static    │ │
+│  │  (Port 80)  │    │   Files     │ │
+│  └─────────────┘    └─────────────┘ │
+│                                     │
+│  ┌─────────────┐    ┌─────────────┐ │
+│  │   Health    │    │  Security   │ │
+│  │   Check     │    │  Headers    │ │
+│  └─────────────┘    └─────────────┘ │
+│                                     │
+└─────────────────────────────────────┘
 ```
 
-### 2. Project Creation
+### 3. Network Architecture
 
-The `create-project-modular.sh` script orchestrates the entire process:
+The network architecture provides isolation between projects while allowing controlled communication:
 
-1. **Parse Arguments**: Process command-line parameters
-2. **Validate Environment**: Ensure Nix environment and container engine
-3. **Check Proxy**: Detect existing proxy or create new one
-4. **Setup Project Structure**: Create directories and copy certificates
-5. **Generate Project Files**: Create Dockerfile, docker-compose.yml, nginx.conf
-6. **Configure Environment**: Apply environment-specific settings
-7. **Deploy Project**: Build container and connect to networks
-8. **Verify Deployment**: Perform health checks
+- **nginx-proxy-network**: Shared network for communication between proxy and project containers
+- **project-specific networks**: Isolated networks for each project
 
-### 3. Proxy Integration
-
-The key to the system's reliability is the proxy integration process:
-
-1. **Container IP Resolution**: The script obtains the project container's IP address
-2. **Domain Configuration**: Creates a domain-specific config file using the IP address (not hostname)
-3. **Certificate Copying**: Copies certificates to the proxy's certificate directory
-4. **Proxy Reload**: Performs a graceful reload of the proxy configuration
-
-### 4. DNS Resolution Fix
-
-A critical improvement in the system is using container IP addresses instead of hostnames in proxy_pass directives:
-
-```nginx
-# Using container IP (reliable)
-proxy_pass http://10.89.1.2:80;
-
-# Instead of container hostname (potential DNS issues)
-proxy_pass http://container-name:80;
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   nginx-proxy   │    │   project-a     │    │   project-b     │
+│   (Port 8080)   │◄──►│   (Port 8090)   │    │   (Port 8091)   │
+│   (Port 8443)   │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └─────── nginx-proxy-network ──────────────────────┘
+                         │                       │
+            ┌─────────────────┐    ┌─────────────────┐
+            │  project-a-net  │    │  project-b-net  │
+            │   (Isolated)    │    │   (Isolated)    │
+            └─────────────────┘    └─────────────────┘
 ```
 
-This prevents the "host not found in upstream" errors that would otherwise cause nginx to fail to start.
+### 4. SSL Certificate Management
 
-## Environment Types
+SSL certificates are managed at multiple levels:
+
+- **Master certificates**: Stored in the `certs/` directory at the project root
+- **Domain-specific certificates**: Generated for each project and stored in `certs/<domain>/`
+- **Proxy certificates**: Copied to the proxy container for SSL termination
+
+### 5. Automation Scripts
+
+The system includes comprehensive automation scripts for:
+
+- Project creation and deployment
+- Certificate management
+- Environment configuration
+- Proxy integration
+- Deployment verification
+
+## Deployment Flow
+
+The deployment process follows these steps:
+
+1. **Environment Setup**: Validate the environment and prepare for deployment
+2. **Certificate Generation**: Generate or validate SSL certificates
+3. **Proxy Setup**: Check and configure the central proxy
+4. **Project Structure**: Create the project directory structure
+5. **Project Files**: Generate project-specific configuration files
+6. **Environment Configuration**: Configure for development or production
+7. **Deployment**: Build and start the project container
+8. **Verification**: Verify the deployment was successful
+
+## Zero-Downtime Incremental Deployment
+
+The system supports adding new projects to a running ecosystem without disrupting existing services:
+
+1. **Proxy Detection**: Automatically detect if the proxy is running
+2. **Preserve Existing Configuration**: Keep existing domain configurations intact
+3. **Network Integration**: Connect new project to the proxy network
+4. **Certificate Integration**: Copy domain-specific certificates to proxy
+5. **Configuration Testing**: Test new configuration before applying
+6. **Safe Reload**: Reload proxy configuration without disrupting existing services
+7. **Rollback Capability**: Revert changes if configuration reload fails
+
+## Environment Support
+
+The system supports both development and production environments:
 
 ### Development Environment (DEV)
 
-- Self-signed certificates
-- Local hosts file updates
-- Development-optimized settings
-- Hot reload capability
+- Self-signed SSL certificates
+- Local DNS resolution via hosts file
+- Hot reload for development
+- Detailed logging for debugging
 
 ### Production Environment (PRO)
 
-- Production-grade certificates
+- Production SSL certificates
+- Cloudflare integration
 - Enhanced security settings
-- Performance optimizations
+- Performance optimization
 
 ## Security Features
 
-- **SSL/TLS**: Modern protocols and ciphers
-- **Security Headers**: CSP, X-Frame-Options, etc.
-- **Rate Limiting**: Protection against abuse
-- **Bad Bot Blocking**: Filter malicious traffic
-- **Network Isolation**: Projects cannot communicate directly
+The system includes comprehensive security features:
 
-## Incremental Deployment
+1. **SSL/TLS Termination**: Modern SSL configuration at proxy level
+2. **Security Headers**: HSTS, CSP, X-Frame-Options, and more
+3. **Network Isolation**: Projects cannot communicate directly
+4. **Rate Limiting**: Prevent DDoS attacks
+5. **Bad Bot Blocking**: Block malicious bots
+6. **Method Filtering**: Block unusual HTTP methods
 
-The system supports adding new projects without disrupting existing ones:
+## Podman Integration
 
-1. **Proxy Detection**: Identifies existing proxy infrastructure
-2. **Ecosystem Preservation**: Maintains running services
-3. **Seamless Integration**: Adds new project without downtime
-4. **Health Verification**: Validates new and existing projects
+The system includes complete podman integration for rootless container operation:
 
-## Troubleshooting
+1. **Rootless Operation**: Containers run without root privileges
+2. **Network Management**: Custom networks for isolation
+3. **Docker Compatibility**: Compatible with Docker Compose files
+4. **IP-based Routing**: Use container IP addresses for reliable routing
 
-Common issues and their solutions:
+## Flow Diagrams
 
-1. **Proxy Crash Loop**: Usually caused by stale domain configurations referencing non-existent containers
-2. **Container Networking**: Ensure both proxy and project containers are on the shared network
-3. **Certificate Issues**: Verify paths and permissions
-4. **Port Conflicts**: Check for services using the same ports
-5. **DNS Resolution**: Use container IPs instead of hostnames in proxy_pass directives
+### Project Creation Flow
 
-## Port Forwarding in Production
-
-In production, the proxy runs on unprivileged ports (8080/8443) and requires port forwarding:
-
-```bash
-# Forward privileged ports to container ports
-sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+```
+┌─────────────────┐
+│ Start           │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Parse Arguments │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Validate Env    │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Check SSL Certs │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Check Proxy     │◄───┐
+└────────┬────────┘    │
+         │             │
+┌────────▼────────┐    │
+│ Setup Project   │    │
+└────────┬────────┘    │
+         │             │
+┌────────▼────────┐    │
+│ Generate Files  │    │
+└────────┬────────┘    │
+         │             │
+┌────────▼────────┐    │
+│ Configure Env   │    │
+└────────┬────────┘    │
+         │             │
+┌────────▼────────┐    │
+│ Deploy Project  │    │
+└────────┬────────┘    │
+         │             │
+┌────────▼────────┐    │
+│ Verify Success  │────┘
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Done            │
+└─────────────────┘
 ```
 
-## Verification Commands
+### Request Flow
 
-```bash
-# Check containers
-podman ps | grep -E "(nginx-proxy|project-name)"
+```
+┌─────────────────┐
+│ Client Request  │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ DNS Resolution  │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ nginx-proxy     │
+│ (8080/8443)     │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ SSL Termination │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Security Checks │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Domain Routing  │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Project Container│
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Response        │
+└─────────────────┘
+```
 
-# Check proxy logs
-podman logs nginx-proxy --tail 20
+## Conclusion
 
-# Test proxy configuration
-podman exec nginx-proxy nginx -t
-
-# Test connectivity
-podman exec nginx-proxy curl -I http://project-name:80
-
-# External test
-curl -I -H "Host: domain.name" http://localhost:8080
-curl -I -k -H "Host: domain.name" https://localhost:8443
-``` 
+The Microservices Nginx Architecture provides a robust, scalable, and secure infrastructure for hosting multiple web applications. The system's modular design, comprehensive automation, and security features make it suitable for both development and production environments. 
