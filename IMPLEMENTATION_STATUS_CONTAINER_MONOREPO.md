@@ -75,7 +75,7 @@ For comprehensive Nix integration details, see [Nix Integration Plan - Frontend 
 - Respect existing output directory (`./dist`)
 - No modification of existing Nix configuration
 
-### 3. Multi-Stage Dockerfile
+### 3. Multi-Stage Dockerfile with Smart Auto-Detection
 
 ```dockerfile
 # Stage 1: Build frontend using existing Nix flake
@@ -83,7 +83,7 @@ FROM nixos/nix:latest AS frontend-builder
 WORKDIR /build
 
 # Copy entire monorepo (to access flake.nix and frontend directory)
-COPY {{MONOREPO_DIR}} .
+COPY . .
 
 # Build using existing flake.nix
 RUN nix build .#frontend
@@ -96,8 +96,27 @@ WORKDIR /opt/{{PROJECT_NAME}}
 # Install required packages
 RUN apk add --no-cache curl
 
-# Copy built frontend from Nix build result
-COPY --from=frontend-builder /build/result/dist /usr/share/nginx/html
+# Smart copy: Auto-detect Nix build result structure
+COPY --from=frontend-builder /build/result /tmp/nix-result
+RUN set -e; \
+    if [ -d "/tmp/nix-result/dist" ] && [ "$(ls -A /tmp/nix-result/dist 2>/dev/null)" ]; then \
+        echo "Detected build output in dist/ subdirectory"; \
+        cp -r /tmp/nix-result/dist/* /usr/share/nginx/html/; \
+    elif [ -d "/tmp/nix-result/build" ] && [ "$(ls -A /tmp/nix-result/build 2>/dev/null)" ]; then \
+        echo "Detected build output in build/ subdirectory"; \
+        cp -r /tmp/nix-result/build/* /usr/share/nginx/html/; \
+    elif [ -d "/tmp/nix-result/public" ] && [ "$(ls -A /tmp/nix-result/public 2>/dev/null)" ]; then \
+        echo "Detected build output in public/ subdirectory"; \
+        cp -r /tmp/nix-result/public/* /usr/share/nginx/html/; \
+    elif [ "$(ls -A /tmp/nix-result 2>/dev/null)" ]; then \
+        echo "Detected build output directly in result directory"; \
+        cp -r /tmp/nix-result/* /usr/share/nginx/html/; \
+    else \
+        echo "ERROR: No build output found"; \
+        ls -la /tmp/nix-result/; \
+        exit 1; \
+    fi && \
+    rm -rf /tmp/nix-result
 
 # Copy SSL certificates
 COPY --chown=nginx:nginx certs/cert.pem /etc/ssl/certs/cert.pem
@@ -218,6 +237,11 @@ networks:
   - ✅ Fixed proxy configuration cleanup in tests
   - ✅ **ALL INTEGRATION TESTS PASSING** - complete end-to-end validation
   - ✅ Monorepo deployment fully functional and production-ready
+- [x] **Smart Nix result auto-detection** *(Completed: 2025-07-19)*
+  - ✅ Dynamic detection of Nix build result structures
+  - ✅ Supports multiple common patterns: `/dist`, `/build`, `/public`, direct output
+  - ✅ **PRODUCTION TESTED** with real monorepo (mapakms.com)
+  - ✅ Flexible and future-proof for different flake.nix configurations
 
 ### Pending
 - [ ] Document usage and examples
@@ -341,12 +365,28 @@ For detailed backend integration templates, see [Nix Integration Plan - Backend 
   --env DEV
 ```
 
+## Production Validation ✅
+
+### Real-World Testing Success
+
+The monorepo implementation has been **successfully tested** with a production React 18 + TypeScript application:
+
+**Test Case**: `mapakms.com`
+- **Monorepo**: `/opt/mapa-kms` 
+- **Frontend**: React 18 + TypeScript in `frontend/`
+- **Build System**: Nix flake with custom `installPhase`
+- **Domain**: Production-ready SSL deployment
+- **Result**: ✅ **Full deployment success**
+
+This validates the system works with real-world monorepo configurations and complex Nix setups.
+
 ## Key Differences from Original Plan
 
 1. **No Nix File Generation**: The script will not generate new Nix files
 2. **Leverage Existing Setup**: Use your existing `flake.nix` and build commands
 3. **Respect Existing Structure**: Work with your current output directories and build processes
-4. **Simplified Implementation**: Focus on container orchestration rather than build system configuration
+4. **Smart Auto-Detection**: Automatically adapts to different Nix result patterns
+5. **Simplified Implementation**: Focus on container orchestration rather than build system configuration
 
 ## Related Documentation
 

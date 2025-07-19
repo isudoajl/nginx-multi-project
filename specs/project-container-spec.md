@@ -40,6 +40,33 @@ projects/
         └── cert-key.pem
 ```
 
+## Monorepo Support
+
+### Smart Nix Result Auto-Detection
+
+For monorepo projects with existing Nix flake configurations, the system includes intelligent build result detection:
+
+#### Supported Patterns
+- **`/result/dist/`**: React, Vue, Vite projects (most common)
+- **`/result/build/`**: Create React App, some custom configurations  
+- **`/result/public/`**: Static site generators (Gatsby, etc.)
+- **`/result/`**: Direct output for custom flake.nix installPhase
+
+#### Multi-Stage Build Process
+```dockerfile
+# Stage 1: Nix build
+FROM nixos/nix:latest AS frontend-builder
+COPY . .
+RUN nix build .#frontend
+
+# Stage 2: Smart detection and copy
+FROM nginx:alpine
+COPY --from=frontend-builder /build/result /tmp/nix-result
+RUN # Smart detection logic automatically selects correct pattern
+```
+
+This approach ensures compatibility with different flake.nix configurations without requiring manual path specification.
+
 ## Docker Compose Configuration
 
 ```yaml

@@ -113,8 +113,28 @@ WORKDIR /opt/$PROJECT_NAME
 # Install required packages
 RUN apk add --no-cache curl
 
-# Copy built frontend from Nix build result
-COPY --from=frontend-builder /build/result/dist /usr/share/nginx/html
+# Smart copy: Try multiple common Nix build result patterns
+COPY --from=frontend-builder /build/result /tmp/nix-result
+RUN set -e; \
+    if [ -d "/tmp/nix-result/dist" ] && [ "\$(ls -A /tmp/nix-result/dist 2>/dev/null)" ]; then \
+        echo "Detected build output in dist/ subdirectory"; \
+        cp -r /tmp/nix-result/dist/* /usr/share/nginx/html/; \
+    elif [ -d "/tmp/nix-result/build" ] && [ "\$(ls -A /tmp/nix-result/build 2>/dev/null)" ]; then \
+        echo "Detected build output in build/ subdirectory"; \
+        cp -r /tmp/nix-result/build/* /usr/share/nginx/html/; \
+    elif [ -d "/tmp/nix-result/public" ] && [ "\$(ls -A /tmp/nix-result/public 2>/dev/null)" ]; then \
+        echo "Detected build output in public/ subdirectory"; \
+        cp -r /tmp/nix-result/public/* /usr/share/nginx/html/; \
+    elif [ "\$(ls -A /tmp/nix-result 2>/dev/null)" ]; then \
+        echo "Detected build output directly in result directory"; \
+        cp -r /tmp/nix-result/* /usr/share/nginx/html/; \
+    else \
+        echo "ERROR: No build output found"; \
+        echo "Contents of /tmp/nix-result:"; \
+        ls -la /tmp/nix-result/; \
+        exit 1; \
+    fi && \
+    rm -rf /tmp/nix-result
 
 # Create SSL certificate directories (certificates will be mounted at runtime)
 RUN mkdir -p /etc/ssl/certs /etc/ssl/private
