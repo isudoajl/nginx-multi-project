@@ -267,13 +267,66 @@ function deploy_monorepo_project() {
     
     # Run container with monorepo-specific volume mappings (no html volume)
     log "Starting monorepo project container..."
-    $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
-      --network "${proxy_network}" \
-      -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
-      -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
-      -v "${project_dir}/certs:/etc/nginx/certs:ro" \
-      -v "${project_dir}/logs:/var/log/nginx" \
-      "${PROJECT_NAME}" || handle_error "Failed to run monorepo project container"
+    
+    # Build container command with backend support if needed
+    if [[ "$HAS_BACKEND" == "true" ]]; then
+      # Add backend-specific environment variables and volumes
+      backend_env_args="-e HAS_BACKEND=${HAS_BACKEND} \
+        -e BACKEND_SUBDIR=${BACKEND_SUBDIR} \
+        -e BACKEND_PORT=${BACKEND_PORT} \
+        -e BACKEND_FRAMEWORK=${BACKEND_FRAMEWORK:-unknown} \
+        -e DATABASE_URL=sqlite:${MONOREPO_DIR}/dev.db \
+        -e FRONTEND_URL=https://${DOMAIN_NAME}"
+      
+      # Add database volume for Rust backends
+      if [[ "${BACKEND_FRAMEWORK:-unknown}" == "rust" ]]; then
+        $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+          --network "${proxy_network}" \
+          -e PROJECT_NAME="${PROJECT_NAME}" \
+          -e DOMAIN_NAME="${DOMAIN_NAME}" \
+          -e IS_MONOREPO=true \
+          -e MONOREPO_DIR="${MONOREPO_DIR}" \
+          -e FRONTEND_SUBDIR="${FRONTEND_SUBDIR}" \
+          -e BUILD_OUTPUT_DIR="${BUILD_OUTPUT_DIR}" \
+          ${backend_env_args} \
+          -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+          -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+          -v "${project_dir}/logs:/var/log/nginx" \
+          -v "${MONOREPO_DIR}:${MONOREPO_DIR}" \
+          "${PROJECT_NAME}" || handle_error "Failed to run monorepo project container"
+      else
+        $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+          --network "${proxy_network}" \
+          -e PROJECT_NAME="${PROJECT_NAME}" \
+          -e DOMAIN_NAME="${DOMAIN_NAME}" \
+          -e IS_MONOREPO=true \
+          -e MONOREPO_DIR="${MONOREPO_DIR}" \
+          -e FRONTEND_SUBDIR="${FRONTEND_SUBDIR}" \
+          -e BUILD_OUTPUT_DIR="${BUILD_OUTPUT_DIR}" \
+          ${backend_env_args} \
+          -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+          -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+          -v "${project_dir}/logs:/var/log/nginx" \
+          "${PROJECT_NAME}" || handle_error "Failed to run monorepo project container"
+      fi
+    else
+      # Frontend-only monorepo project
+      $CONTAINER_ENGINE run -d --name "${PROJECT_NAME}" \
+        --network "${proxy_network}" \
+        -e PROJECT_NAME="${PROJECT_NAME}" \
+        -e DOMAIN_NAME="${DOMAIN_NAME}" \
+        -e IS_MONOREPO=true \
+        -e MONOREPO_DIR="${MONOREPO_DIR}" \
+        -e FRONTEND_SUBDIR="${FRONTEND_SUBDIR}" \
+        -e BUILD_OUTPUT_DIR="${BUILD_OUTPUT_DIR}" \
+        -v "${project_dir}/nginx.conf:/etc/nginx/nginx.conf:ro" \
+        -v "${project_dir}/conf.d:/etc/nginx/conf.d:ro" \
+        -v "${project_dir}/certs:/etc/nginx/certs:ro" \
+        -v "${project_dir}/logs:/var/log/nginx" \
+        "${PROJECT_NAME}" || handle_error "Failed to run monorepo project container"
+    fi
   else
     # For docker-compose, change to project directory but use monorepo context
     cd "${project_dir}" || handle_error "Failed to change to project directory"

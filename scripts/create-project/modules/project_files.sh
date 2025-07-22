@@ -237,16 +237,21 @@ COPY . .
 # Build frontend using Nix dev environment + build command
 RUN nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $FRONTEND_SUBDIR && ${FRONTEND_BUILD_CMD:-npm run build}"
 
-# Stage 2: Build backend using existing Nix flake
-FROM nixos/nix:latest AS backend-builder
+# Stage 2: Build backend using Rust with musl for static linking
+FROM rust:alpine AS backend-builder
 
-# Enable flakes support
-RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+# Install build dependencies for static linking
+RUN apk add --no-cache musl-dev gcc libc-dev openssl-dev openssl-libs-static pkgconfig
 
 WORKDIR /build
 
-# Copy entire monorepo (to access flake.nix and backend directory)
-COPY . .
+# Copy backend source code
+COPY $BACKEND_SUBDIR .
+
+# Create .cargo/config.toml for static linking
+RUN mkdir -p .cargo && \\
+    echo '[target.x86_64-unknown-linux-musl]' > .cargo/config.toml && \\
+    echo 'rustflags = ["-C", "target-feature=+crt-static"]' >> .cargo/config.toml
 
 # Build backend using framework-specific approach
 $(generate_backend_build_commands)
@@ -363,8 +368,9 @@ EOF
 function generate_backend_build_commands() {
   case "${BACKEND_FRAMEWORK:-unknown}" in
     "rust")
-      echo "# Build backend using Nix dev environment + cargo (avoids flake package issues)"
-      echo "RUN nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"cd $BACKEND_SUBDIR && cargo build --release\""
+      echo "# Build backend using Rust with musl for static linking"
+      echo "RUN rustup target add x86_64-unknown-linux-musl"
+      echo "RUN RUSTFLAGS=\"-C target-feature=+crt-static\" cargo build --release --target x86_64-unknown-linux-musl"
       ;;
     "nodejs")
       echo "# Build backend using Nix dev environment + npm"
@@ -496,10 +502,10 @@ function generate_backend_copy_commands() {
   case "${BACKEND_FRAMEWORK:-unknown}" in
     "rust")
       cat << EOF
-# Copy built backend from cargo target directory
-COPY --from=backend-builder /build/$BACKEND_SUBDIR/target/release /tmp/backend-result
+# Copy statically linked backend from musl target directory
+COPY --from=backend-builder /build/target/x86_64-unknown-linux-musl/release /tmp/backend-result
 RUN mkdir -p /opt/backend && \\
-    echo "Copying Rust backend binaries from cargo build..."; \\
+    echo "Copying statically linked Rust backend binaries..."; \\
     find /tmp/backend-result -type f -executable ! -name "*.d" | while read binary; do \\
         binary_name=\$(basename "\$binary"); \\
         echo "Found backend binary: \$binary_name"; \\
@@ -552,7 +558,22 @@ start_backend() {
     case "${BACKEND_FRAMEWORK:-unknown}" in
         "rust")
             # Find the main Rust binary and start it
-            backend_binary=\$(find /opt/backend -type f -executable | head -n 1)
+            # Look for the main backend binary with common naming patterns
+            if [[ -f "/opt/backend/$PROJECT_NAME" ]]; then
+                backend_binary="/opt/backend/$PROJECT_NAME"
+            elif [[ -f "/opt/backend/${PROJECT_NAME//-/_}" ]]; then
+                backend_binary="/opt/backend/${PROJECT_NAME//-/_}"
+            elif [[ -f "/opt/backend/${PROJECT_NAME//mapa-kms/mapas-km-backend}" ]]; then
+                backend_binary="/opt/backend/${PROJECT_NAME//mapa-kms/mapas-km-backend}"
+            else
+                # Look for any *backend* binary without hash suffix, prioritizing over other binaries
+                backend_binary=\$(find /opt/backend -type f -executable -name "*backend" ! -name "*-*" 2>/dev/null | head -n 1)
+                if [[ -z "\$backend_binary" ]]; then
+                    # Fallback to finding any backend binary that doesn't contain 'test' or 'populate'
+                    backend_binary=\$(find /opt/backend -type f -executable ! -name "*test*" ! -name "*populate*" | head -n 1)
+                fi
+            fi
+            
             if [[ -n "\$backend_binary" ]]; then
                 log "Starting Rust backend: \$backend_binary"
                 # Rust backend typically manages its own port configuration
@@ -695,12 +716,21 @@ function generate_monorepo_docker_compose() {
   
   # Check if backend is enabled to add backend-specific configuration
   local backend_env_vars=""
+  local backend_volumes=""
   if [[ "$HAS_BACKEND" == "true" ]]; then
     backend_env_vars="
       - HAS_BACKEND=${HAS_BACKEND}
       - BACKEND_SUBDIR=${BACKEND_SUBDIR}
       - BACKEND_PORT=${BACKEND_PORT}
-      - BACKEND_FRAMEWORK=${BACKEND_FRAMEWORK:-unknown}"
+      - BACKEND_FRAMEWORK=${BACKEND_FRAMEWORK:-unknown}
+      - DATABASE_URL=sqlite:${MONOREPO_DIR}/dev.db
+      - FRONTEND_URL=https://${DOMAIN_NAME}"
+    
+    # Add database volume mount for backends that need it
+    if [[ "${BACKEND_FRAMEWORK:-unknown}" == "rust" ]]; then
+      backend_volumes="
+      - ${MONOREPO_DIR}:${MONOREPO_DIR}"
+    fi
   fi
   
   cat > "${project_dir}/docker-compose.yml" << EOF
@@ -717,7 +747,7 @@ services:
       - ./conf.d:/etc/nginx/conf.d:ro
       - ./logs:/var/log/nginx
       - ./certs/cert.pem:/etc/ssl/certs/cert.pem:ro
-      - ./certs/cert-key.pem:/etc/ssl/private/cert-key.pem:ro
+      - ./certs/cert-key.pem:/etc/ssl/private/cert-key.pem:ro${backend_volumes}
     restart: unless-stopped
     networks:
       - ${PROJECT_NAME}-network

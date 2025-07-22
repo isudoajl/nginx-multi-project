@@ -18,6 +18,19 @@ The script automation system now provides:
 
 The create-project-modular.sh script has been transformed into an intelligent deployment system that supports both from-scratch infrastructure creation and zero-downtime incremental deployment.
 
+### ⚠️ **CRITICAL DEPLOYMENT ARCHITECTURE NOTE** (Discovered 2025-07-22)
+
+**Container Engine Deployment Inconsistency:**
+- Script generates correct `docker-compose.yml` with all configurations
+- When `CONTAINER_ENGINE=podman`: Uses direct `podman run` commands, **bypassing docker-compose.yml**
+- When `CONTAINER_ENGINE=docker`: Uses `docker-compose up -d --build`
+- This caused deployment inconsistencies where podman deployments missed volume mounts and environment variables
+
+**Resolution Applied:**
+- Updated `deployment.sh` to include all docker-compose.yml configurations in podman run commands
+- Synchronized volume mounts, environment variables, and network settings between both deployment paths
+- Both deployment methods now produce identical container configurations
+
 #### Deployment Intelligence
 ```bash
 # Automatic Proxy Detection and Decision Making

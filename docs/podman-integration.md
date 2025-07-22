@@ -47,6 +47,19 @@ The project creation and deployment process is handled by `scripts/create-projec
 7. Verifies network connectivity
 8. Uses IP-based routing for reliable proxy_pass directives
 
+### ⚠️ **Critical Deployment Architecture (Updated 2025-07-22)**
+
+**Container Engine Detection and Deployment:**
+- System automatically detects container engine: `podman` (preferred) → `docker` (fallback)
+- **Podman deployment**: Uses direct `podman run` commands with inline configuration
+- **Docker deployment**: Uses `docker-compose up -d --build` with docker-compose.yml
+
+**Important Note:**
+- Script generates `docker-compose.yml` but podman deployment bypasses it
+- Both methods produce identical container configurations
+- Manual `podman-compose up -d` will use docker-compose.yml (useful for debugging)
+- Script deployment ensures configuration synchronization between both paths
+
 ## Usage
 
 ### Setting Up the Environment

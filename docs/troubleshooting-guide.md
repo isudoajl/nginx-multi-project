@@ -15,6 +15,38 @@ This guide provides solutions for common issues encountered when working with th
 
 ## Deployment Issues
 
+### Container Configuration Inconsistency (Podman vs Docker)
+
+**Symptoms:**
+- Fresh deployment fails but manual restart works
+- Missing database files or environment variables in container
+- `docker-compose.yml` looks correct but container doesn't have expected mounts
+
+**Root Cause (Discovered 2025-07-22):**
+- Script generates correct `docker-compose.yml` with all configurations
+- When `CONTAINER_ENGINE=podman`: Uses direct `podman run` commands, bypassing docker-compose.yml
+- Configuration mismatch between docker-compose.yml and podman run commands
+
+**Solution:**
+This issue has been fixed in the codebase. If you encounter it:
+
+1. Check which container engine is being used:
+   ```bash
+   command -v podman &> /dev/null && echo "Using podman" || echo "Using docker"
+   ```
+
+2. For manual testing, use docker-compose directly:
+   ```bash
+   cd projects/your-project
+   podman-compose down
+   podman-compose up -d
+   ```
+
+3. Verify container mounts match docker-compose.yml:
+   ```bash
+   podman inspect container-name --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+   ```
+
 ### Script Hangs at "Waiting for proxy to be ready..."
 
 **Symptoms:**
