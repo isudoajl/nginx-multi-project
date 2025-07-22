@@ -66,11 +66,21 @@ For detailed technical specifications, please refer to the [specs](../specs/SPEC
 The system supports adding new projects to a running ecosystem without disrupting existing services:
 
 ```bash
-# Incremental deployment - existing projects remain untouched
+# Frontend-only incremental deployment
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name second-app \
   --domain second-app.com \
+  --env PRO
+
+# Full-stack incremental deployment
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name fullstack-app \
+  --domain fullstack-app.com \
+  --monorepo /path/to/monorepo \
+  --frontend-dir frontend \
+  --backend-dir backend \
   --env PRO
 ```
 
@@ -119,4 +129,30 @@ The system uses container name-based communication without exposed ports:
 - Container name-based DNS resolution
 - Internal communication without host port exposure
 
-For more details, see the [Project Container Architecture](project-container-architecture.md) document. 
+For more details, see the [Project Container Architecture](project-container-architecture.md) document.
+
+### Full-Stack Deployment Support
+
+The system now supports comprehensive full-stack deployments with integrated frontend and backend services:
+
+- **Multi-Framework Backend Support**: Rust, Node.js, Go, Python
+- **Multi-Service Containers**: nginx + backend application server
+- **API Routing**: Automatic `/api/*` → backend proxy configuration
+- **Framework Detection**: Automatic build system detection and configuration
+- **Process Management**: Coordinated startup and health monitoring
+- **Monorepo Integration**: Support for existing Nix flake configurations
+
+Example full-stack deployment:
+```bash
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name my-rust-app \
+  --domain my-rust-app.com \
+  --monorepo /opt/my-rust-app \
+  --frontend-dir frontend \
+  --backend-dir backend \
+  --backend-port 3000 \
+  --env PRO
+```
+
+For more details, see the [Deployment Guide](deployment-guide.md) and [Project Container Guide](project-container-guide.md). 

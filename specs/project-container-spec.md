@@ -69,9 +69,33 @@ This approach ensures compatibility with different flake.nix configurations with
 
 ## Multi-Service Architecture (Full-Stack)
 
-### Overview
+### Container Service Composition
 
-Project containers can host both frontend and backend services in a single container using a coordinated startup approach with nginx as the frontend proxy and a backend application server.
+For full-stack deployments, containers run multiple coordinated services with nginx as the frontend proxy and a backend application server.
+
+### Supported Backend Frameworks
+
+| Framework | Detection | Build Command | Runtime Dependencies |
+|-----------|----------|---------------|---------------------|
+| Rust | `Cargo.toml` | `cargo build --release` | `bash curl ca-certificates` |
+| Node.js | `package.json` | `npm run build` | `bash curl nodejs npm` |
+| Go | `go.mod` | `go build` | `bash curl ca-certificates` |
+| Python | `requirements.txt` | `pip install -r requirements.txt` | `bash curl python3 py3-pip` |
+
+### Multi-Stage Build Process
+
+1. **Frontend Builder Stage**: Compiles frontend assets using Nix or npm
+2. **Backend Builder Stage**: Compiles backend services using framework tools
+3. **Runtime Stage**: Combines both services with nginx and process management
+
+### Service Communication
+
+- **Internal**: Backend services communicate on configurable ports (default: 3000)
+- **External**: nginx proxies `/api/*` requests to backend service
+- **Health Monitoring**: Both services provide health check endpoints
+- **Process Coordination**: Startup script ensures backend readiness before nginx starts
+
+
 
 ### Supported Backend Frameworks
 

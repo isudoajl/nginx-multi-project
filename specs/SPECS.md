@@ -29,12 +29,20 @@ The central proxy is responsible for:
 
 ### 2. Project Containers
 
-Each project container includes:
+Each project container supports both frontend-only and full-stack architectures:
+
+**Frontend-Only Containers:**
 - Isolated Nginx instance
 - Project-specific configuration
 - Static file serving
 - Health check endpoints
 - Security hardening
+
+**Full-Stack Containers:**
+- Multi-service architecture (nginx + backend)
+- Framework-agnostic backend support (Rust, Node.js, Go, Python)
+- API routing with `/api/*` → backend proxy
+- Process management and health monitoring
 - Internal port 80 (no host port exposure)
 
 [Detailed Project Container Specification](project-container-spec.md)
@@ -53,11 +61,12 @@ The network architecture provides:
 ### 4. Automation Scripts
 
 The automation scripts provide:
-- Project creation and deployment
+- Project creation and deployment (frontend-only and full-stack)
+- Framework detection and multi-stage container builds
 - Certificate management
 - Environment configuration
-- Proxy integration
-- Deployment verification
+- Proxy integration with API routing
+- Deployment verification and health monitoring
 - Zero-downtime incremental deployment
 - Internal networking setup
 
@@ -145,10 +154,12 @@ The Cloudflare integration provides:
 
 The project is currently in **PRODUCTION READY** state with all core features implemented and tested. Recent major achievements include:
 
-1. **Podman Integration**: Complete podman integration for rootless container operation with robust networking
-2. **Enterprise Documentation**: Comprehensive documentation and specification suite
-3. **Script Architecture Fixes**: Fixed critical script architecture issues in the modular project creation system
-4. **Incremental Deployment System**: Zero-downtime project addition to a running ecosystem
-5. **Internal Container Networking**: Refactored architecture to use container name-based communication without exposed ports
+1. **Full-Stack Deployment Support**: Complete backend framework integration (Rust, Node.js, Go, Python)
+2. **Multi-Service Container Architecture**: nginx + backend service coordination with health monitoring
+3. **Podman Integration**: Complete podman integration for rootless container operation with robust networking
+4. **Enterprise Documentation**: Comprehensive documentation and specification suite
+5. **Script Architecture Fixes**: Fixed critical script architecture issues in the modular project creation system
+6. **Incremental Deployment System**: Zero-downtime project addition to a running ecosystem
+7. **Internal Container Networking**: Refactored architecture to use container name-based communication without exposed ports
 
 For detailed implementation status, see the [Implementation Status](../IMPLEMENTATION_STATUS.md) document.
