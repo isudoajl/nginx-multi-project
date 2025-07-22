@@ -1,0 +1,10 @@
+{
+  "name": "test-frontend",
+  "version": "1.0.0",
+  "description": "Test frontend for full-stack monorepo",
+  "scripts": {
+    "build": "mkdir -p dist && cp -r src/* dist/",
+    "dev": "echo 'Development mode not implemented'"
+  },
+  "devDependencies": {}
+}

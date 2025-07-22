@@ -247,7 +247,61 @@ networks:
 - [ ] Document usage and examples
 - [ ] Refine edge case testing for error scenarios
 
-## Phase 2: Backend Implementation (Future)
+## Phase 2: Backend Implementation Tasks
+
+### Completed *(2025-07-22)*
+- [x] **Add backend-specific command line arguments to args.sh** *(Completed: 2025-07-22)*
+  - ✅ Added `--backend-dir`, `--backend-build`, `--backend-port` parameters  
+  - ✅ Implemented backend framework detection logic for Rust, Node.js, Go, Python
+  - ✅ Added backend validation and error handling
+  - ✅ Backend arguments parsing fully functional
+- [x] **Implement backend framework detection logic** *(Completed: 2025-07-22)*
+  - ✅ `detect_backend_framework()` function detects Cargo.toml, package.json, go.mod, requirements.txt
+  - ✅ Sets appropriate build commands and output directories per framework
+  - ✅ Exports framework-specific variables for Dockerfile generation
+- [x] **Create extended multi-stage Dockerfile for frontend + backend** *(Completed: 2025-07-22)*
+  - ✅ Implemented `generate_nix_fullstack_dockerfile()` for Nix-based builds
+  - ✅ Implemented `generate_npm_fullstack_dockerfile()` for npm-based builds  
+  - ✅ Framework-specific build stages for Rust, Node.js, Go, Python
+  - ✅ Multi-stage build with frontend-builder, backend-builder, and final image stages
+- [x] **Setup internal service communication and proxy routing** *(Completed: 2025-07-22)*
+  - ✅ Updated nginx.conf generation with `generate_fullstack_nginx_conf()`
+  - ✅ Added upstream backend configuration with proxy_pass to backend service
+  - ✅ API route proxying (/api/* -> backend service)
+  - ✅ Health check endpoints for both frontend and backend
+- [x] **Update project structure for backend support** *(Completed: 2025-07-22)*
+  - ✅ Enhanced `setup_monorepo_structure()` with backend validation
+  - ✅ Automatic Cargo.lock generation for Rust backends (critical for Nix builds)
+  - ✅ Backend configuration in monorepo.env file
+  - ✅ Framework detection and configuration export
+- [x] **Create startup script for multi-service management** *(Completed: 2025-07-22)*
+  - ✅ Generated `/start.sh` script for orchestrating nginx + backend services
+  - ✅ Framework-specific backend startup logic (Rust, Node.js, Go, Python)
+  - ✅ Signal handling and graceful shutdown
+  - ✅ Process monitoring and error handling
+
+### Current Status: Near Production Ready *(2025-07-22)*
+- [x] **Real-world production test with mapa-kms monorepo** *(In Progress: 2025-07-22)*
+  - ✅ **Rust backend detected correctly** (Cargo.toml found, framework=rust)
+  - ✅ **Nix flake integration working** (existing flake.nix detected and used)
+  - ✅ **Multi-stage Dockerfile generated** (frontend + backend stages)
+  - ✅ **Cargo.lock already present** (no generation needed)
+  - ✅ **Backend compilation successful** (11m 45s build time, finished with warnings)
+  - ❌ **Container layer commit failed** (no space left on device during final stage)
+
+### Known Issues
+- [ ] **Storage space issue during container build** *(Current blocking issue)*
+  - Backend compiles successfully but container commit fails
+  - Error: "write /tmp/.../container_images_storage.../1: no space left on device"
+  - Requires cleanup of container storage or larger build environment
+
+### Pending
+- [ ] Resolve container storage space issue
+- [ ] Complete production validation with mapa-kms deployment
+- [ ] Document full-stack usage examples
+- [ ] Performance optimization for large monorepo builds
+
+## Phase 2: Backend Implementation (Completed - Testing Phase)
 
 ### 1. Script Modifications
 

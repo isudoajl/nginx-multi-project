@@ -75,7 +75,46 @@ function setup_monorepo_structure() {
     return 1
   fi
   
+  # Validate backend subdirectory if backend is enabled
+  if [[ "$HAS_BACKEND" == "true" ]] && [[ ! -d "$MONOREPO_DIR/$BACKEND_SUBDIR" ]]; then
+    handle_error "Backend subdirectory not found: $MONOREPO_DIR/$BACKEND_SUBDIR"
+    return 1
+  fi
+  
+  # Generate Cargo.lock if missing for Rust backend (CRITICAL for Nix builds)
+  if [[ "$HAS_BACKEND" == "true" ]] && [[ -n "$BACKEND_SUBDIR" ]]; then
+    local backend_path="$MONOREPO_DIR/$BACKEND_SUBDIR"
+    if [[ -f "$backend_path/Cargo.toml" ]] && [[ ! -f "$backend_path/Cargo.lock" ]]; then
+      log "Generating missing Cargo.lock for Rust backend..."
+      if [[ "$USE_EXISTING_NIX" == "true" ]]; then
+        # Use Nix development environment to generate lockfile
+        cd "$MONOREPO_DIR" && nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $BACKEND_SUBDIR && cargo generate-lockfile"
+      else
+        # Use system cargo
+        cd "$backend_path" && cargo generate-lockfile
+      fi
+      if [[ $? -eq 0 ]]; then
+        log "Successfully generated Cargo.lock"
+      else
+        handle_error "Failed to generate Cargo.lock for backend"
+        return 1
+      fi
+    fi
+  fi
+  
   # Create monorepo context file for build process
+  local backend_config=""
+  if [[ "$HAS_BACKEND" == "true" ]]; then
+    backend_config="
+# Backend Configuration
+HAS_BACKEND=$HAS_BACKEND
+BACKEND_SUBDIR=$BACKEND_SUBDIR
+BACKEND_PORT=$BACKEND_PORT
+BACKEND_FRAMEWORK=${BACKEND_FRAMEWORK:-unknown}
+BACKEND_BUILD_CMD=$BACKEND_BUILD_CMD
+BACKEND_OUTPUT_DIR=$BACKEND_OUTPUT_DIR"
+  fi
+  
   cat > "${project_dir}/monorepo.env" << EOF
 # Monorepo Configuration
 IS_MONOREPO=true
@@ -84,10 +123,13 @@ FRONTEND_SUBDIR=$FRONTEND_SUBDIR
 BUILD_OUTPUT_DIR=$BUILD_OUTPUT_DIR
 USE_EXISTING_NIX=$USE_EXISTING_NIX
 NIX_BUILD_CMD=$NIX_BUILD_CMD
-FRONTEND_BUILD_CMD=$FRONTEND_BUILD_CMD
+FRONTEND_BUILD_CMD=$FRONTEND_BUILD_CMD${backend_config}
 EOF
   
   log "Created monorepo configuration file: ${project_dir}/monorepo.env"
+  if [[ "$HAS_BACKEND" == "true" ]]; then
+    log "Backend configuration: ${BACKEND_FRAMEWORK:-unknown} in $BACKEND_SUBDIR on port $BACKEND_PORT"
+  fi
 }
 
 # Function: Setup project certificates

@@ -2,6 +2,70 @@
 
 # Module for argument parsing and validation
 
+# Function: Detect backend framework in monorepo
+function detect_backend_framework() {
+  BACKEND_FRAMEWORK=""
+  BACKEND_BUILD_CMD=""
+  BACKEND_OUTPUT_DIR=""
+  
+  if [[ -z "$BACKEND_SUBDIR" ]] || [[ ! -d "$MONOREPO_DIR/$BACKEND_SUBDIR" ]]; then
+    log "No backend directory specified or found, skipping backend detection"
+    return 0
+  fi
+  
+  local backend_path="$MONOREPO_DIR/$BACKEND_SUBDIR"
+  
+  # Rust detection
+  if [[ -f "$backend_path/Cargo.toml" ]]; then
+    BACKEND_FRAMEWORK="rust"
+    BACKEND_OUTPUT_DIR="target/release"
+    if [[ -z "$BACKEND_BUILD_CMD" ]]; then
+      BACKEND_BUILD_CMD="cargo build --release"
+    fi
+    log "Detected Rust backend framework in $BACKEND_SUBDIR"
+  # Node.js detection
+  elif [[ -f "$backend_path/package.json" ]]; then
+    BACKEND_FRAMEWORK="nodejs"
+    BACKEND_OUTPUT_DIR="dist"
+    if [[ -z "$BACKEND_BUILD_CMD" ]]; then
+      if grep -q '"build"' "$backend_path/package.json"; then
+        BACKEND_BUILD_CMD="npm run build"
+      else
+        BACKEND_BUILD_CMD="npm install"
+      fi
+    fi
+    log "Detected Node.js backend framework in $BACKEND_SUBDIR"
+  # Go detection
+  elif [[ -f "$backend_path/go.mod" ]]; then
+    BACKEND_FRAMEWORK="go"
+    BACKEND_OUTPUT_DIR="bin"
+    if [[ -z "$BACKEND_BUILD_CMD" ]]; then
+      BACKEND_BUILD_CMD="go build -o bin/ ."
+    fi
+    log "Detected Go backend framework in $BACKEND_SUBDIR"
+  # Python detection
+  elif [[ -f "$backend_path/requirements.txt" ]] || [[ -f "$backend_path/pyproject.toml" ]] || [[ -f "$backend_path/setup.py" ]]; then
+    BACKEND_FRAMEWORK="python"
+    BACKEND_OUTPUT_DIR="dist"
+    if [[ -z "$BACKEND_BUILD_CMD" ]]; then
+      if [[ -f "$backend_path/pyproject.toml" ]]; then
+        BACKEND_BUILD_CMD="pip install build && python -m build"
+      else
+        BACKEND_BUILD_CMD="pip install -r requirements.txt"
+      fi
+    fi
+    log "Detected Python backend framework in $BACKEND_SUBDIR"
+  else
+    log "No recognized backend framework found in $BACKEND_SUBDIR"
+    BACKEND_FRAMEWORK="unknown"
+  fi
+  
+  # Export variables for use in other modules
+  export BACKEND_FRAMEWORK
+  export BACKEND_BUILD_CMD
+  export BACKEND_OUTPUT_DIR
+}
+
 # Function: Detect existing Nix configuration in monorepo
 function detect_nix_configuration() {
   USE_EXISTING_NIX=false
@@ -64,6 +128,11 @@ function detect_nix_configuration() {
     BUILD_OUTPUT_DIR="dist"
   fi
   
+  # Detect backend framework if backend is enabled
+  if [[ "$HAS_BACKEND" == "true" ]]; then
+    detect_backend_framework
+  fi
+  
   # Export variables for use in other modules
   export USE_EXISTING_NIX
   export NIX_BUILD_CMD
@@ -88,6 +157,9 @@ function display_help() {
   echo "  --monorepo, -r DIR       Path to monorepo root directory (optional)"
   echo "  --frontend-dir, -i DIR   Relative path to frontend directory within monorepo (optional, default: frontend)"
   echo "  --frontend-build, -F CMD Custom frontend build command (optional, overrides detected command)"
+  echo "  --backend-dir, -b DIR    Relative path to backend directory within monorepo (optional)"
+  echo "  --backend-build, -B CMD  Custom backend build command (optional, overrides detected command)"
+  echo "  --backend-port, -P PORT  Internal port for backend service (optional, default: 8080)"
   echo "  --help, -h               Display this help message"
   echo ""
   echo "Examples:"
@@ -97,10 +169,15 @@ function display_help() {
   echo "    $0 -n my-project -d example.com -e PRO"
   echo "    $0 -n my-project -d example.com -m /path/to/frontend"
   echo ""
-  echo "  Monorepo project:"
+  echo "  Monorepo project (frontend only):"
   echo "    $0 --name my-app --domain my-app.local --monorepo /path/to/monorepo --env DEV"
   echo "    $0 --name my-app --domain my-app.local --monorepo /path/to/monorepo --frontend-dir web --env DEV"
   echo "    $0 --name my-app --domain my-app.local --monorepo /path/to/monorepo --frontend-build 'npm run build:custom' --env DEV"
+  echo ""
+  echo "  Monorepo project (full-stack):"
+  echo "    $0 --name my-app --domain my-app.local --monorepo /path/to/monorepo --backend-dir backend --env DEV"
+  echo "    $0 --name my-app --domain my-app.local --monorepo /path/to/monorepo --frontend-dir web --backend-dir api --backend-port 3000 --env DEV"
+  echo "    $0 --name my-app --domain my-app.local --monorepo /path/to/monorepo --backend-dir backend --backend-build 'cargo build --release' --env DEV"
 }
 
 # Function: Parse arguments
@@ -118,6 +195,11 @@ function parse_arguments() {
   FRONTEND_SUBDIR="frontend"
   FRONTEND_BUILD_CMD=""
   IS_MONOREPO=false
+  # Backend-specific variables
+  BACKEND_SUBDIR=""
+  BACKEND_BUILD_CMD=""
+  BACKEND_PORT="8080"
+  HAS_BACKEND=false
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -166,6 +248,19 @@ function parse_arguments() {
         FRONTEND_BUILD_CMD="$2"
         shift 2
         ;;
+      --backend-dir|-b)
+        BACKEND_SUBDIR="$2"
+        HAS_BACKEND=true
+        shift 2
+        ;;
+      --backend-build|-B)
+        BACKEND_BUILD_CMD="$2"
+        shift 2
+        ;;
+      --backend-port|-P)
+        BACKEND_PORT="$2"
+        shift 2
+        ;;
       --help|-h)
         display_help
         exit 0
@@ -199,6 +294,13 @@ function parse_arguments() {
   if [[ "$ENV_TYPE" != "DEV" && "$ENV_TYPE" != "PRO" ]]; then
     handle_error "Environment type must be either DEV or PRO."
   fi
+  
+  # Validate backend port if backend is enabled
+  if [[ "$HAS_BACKEND" == "true" ]]; then
+    if ! [[ "$BACKEND_PORT" =~ ^[0-9]+$ ]] || [[ "$BACKEND_PORT" -lt 1 ]] || [[ "$BACKEND_PORT" -gt 65535 ]]; then
+      handle_error "Invalid backend port: $BACKEND_PORT. Must be a number between 1 and 65535."
+    fi
+  fi
 
   # Validate monorepo parameters
   if [[ "$IS_MONOREPO" == true ]]; then
@@ -212,6 +314,11 @@ function parse_arguments() {
       handle_error "Frontend directory does not exist in monorepo: $MONOREPO_DIR/$FRONTEND_SUBDIR"
     fi
     
+    # Validate backend subdirectory if backend is enabled
+    if [[ "$HAS_BACKEND" == "true" ]] && [[ ! -d "$MONOREPO_DIR/$BACKEND_SUBDIR" ]]; then
+      handle_error "Backend directory does not exist in monorepo: $MONOREPO_DIR/$BACKEND_SUBDIR"
+    fi
+    
     # Convert to absolute path
     MONOREPO_DIR="$(realpath "$MONOREPO_DIR")"
     
@@ -220,6 +327,10 @@ function parse_arguments() {
     
     log "Monorepo mode enabled: $MONOREPO_DIR"
     log "Frontend directory: $FRONTEND_DIR"
+    if [[ "$HAS_BACKEND" == "true" ]]; then
+      log "Backend directory: $MONOREPO_DIR/$BACKEND_SUBDIR"
+      log "Backend port: $BACKEND_PORT"
+    fi
   fi
 
   # Set default frontend directory if not specified and not monorepo
@@ -250,6 +361,10 @@ function parse_arguments() {
   log "Frontend mount point: $FRONTEND_MOUNT"
   if [[ "$IS_MONOREPO" == true ]]; then
     log "Monorepo configuration: DIR=$MONOREPO_DIR, FRONTEND_SUBDIR=$FRONTEND_SUBDIR"
+    if [[ "$HAS_BACKEND" == "true" ]]; then
+      log "Backend configuration: BACKEND_SUBDIR=$BACKEND_SUBDIR, BACKEND_PORT=$BACKEND_PORT"
+      log "Backend framework detected: ${BACKEND_FRAMEWORK:-unknown}"
+    fi
     log "Nix configuration detected: USE_EXISTING_NIX=${USE_EXISTING_NIX:-false}"
   fi
 } 

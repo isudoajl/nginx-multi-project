@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full-Stack Test App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Full-Stack Monorepo Test</h1>
+        <p>This is a test application demonstrating frontend and backend integration.</p>
+        
+        <h2>Frontend Status</h2>
+        <div class="status success">✅ Frontend is running</div>
+        
+        <h2>Backend API Tests</h2>
+        <button onclick="testBackendHealth()">Test Backend Health</button>
+        <button onclick="testBackendAPI()">Test Backend API</button>
+        
+        <div id="api-results"></div>
+        
+        <h2>Features Tested</h2>
+        <ul>
+            <li>Frontend static file serving</li>
+            <li>Backend API communication</li>
+            <li>Nginx proxy routing (/api/* to backend)</li>
+            <li>Multi-service container architecture</li>
+        </ul>
+    </div>
+
+    <script>
+        async function testBackendHealth() {
+            const resultsDiv = document.getElementById('api-results');
+            resultsDiv.innerHTML = '<div class="status">Testing backend health...</div>';
+            
+            try {
+                const response = await fetch('/api/health');
+                const text = await response.text();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = '<div class="status success">✅ Backend health check passed: ' + text + '</div>';
+                } else {
+                    resultsDiv.innerHTML = '<div class="status error">❌ Backend health check failed: ' + response.status + '</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="status error">❌ Backend health check error: ' + error.message + '</div>';
+            }
+        }
+        
+        async function testBackendAPI() {
+            const resultsDiv = document.getElementById('api-results');
+            resultsDiv.innerHTML = '<div class="status">Testing backend API...</div>';
+            
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = '<div class="status success">✅ Backend API test passed: ' + JSON.stringify(data) + '</div>';
+                } else {
+                    resultsDiv.innerHTML = '<div class="status error">❌ Backend API test failed: ' + response.status + '</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="status error">❌ Backend API test error: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>
