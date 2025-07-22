@@ -152,14 +152,31 @@ The Cloudflare integration provides:
 
 ## Implementation Status
 
-The project is currently in **PRODUCTION READY** state with all core features implemented and tested. Recent major achievements include:
+The project is currently in **PRODUCTION READY BETA** state with all core features implemented and tested. Recent major achievements include:
 
-1. **Full-Stack Deployment Support**: Complete backend framework integration (Rust, Node.js, Go, Python)
-2. **Multi-Service Container Architecture**: nginx + backend service coordination with health monitoring
-3. **Podman Integration**: Complete podman integration for rootless container operation with robust networking
-4. **Enterprise Documentation**: Comprehensive documentation and specification suite
-5. **Script Architecture Fixes**: Fixed critical script architecture issues in the modular project creation system
-6. **Incremental Deployment System**: Zero-downtime project addition to a running ecosystem
-7. **Internal Container Networking**: Refactored architecture to use container name-based communication without exposed ports
+1. **✅ Full-Stack Deployment Support**: Complete backend framework integration (Rust, Node.js, Go, Python)
+2. **✅ Multi-Service Container Architecture**: nginx + backend service coordination with health monitoring
+3. **✅ Podman Integration**: Complete podman integration for rootless container operation with robust networking
+4. **✅ Enterprise Documentation**: Comprehensive documentation and specification suite
+5. **✅ Script Architecture Fixes**: Fixed critical script architecture issues in the modular project creation system
+6. **✅ Incremental Deployment System**: Zero-downtime project addition to a running ecosystem
+7. **✅ Internal Container Networking**: Refactored architecture to use container name-based communication without exposed ports
+8. **✅ API Routing & Frontend-Backend Communication**: Fixed nginx proxy routing and automatic frontend API configuration
+9. **✅ Template Automation**: Automated fixes for hardcoded API URLs in deployment templates
+
+### Latest Beta Fixes (2025-07-23):
+
+**Frontend-Backend Communication Resolution:**
+- **Fixed nginx proxy routing**: Corrected `proxy_pass` configuration to preserve `/api/` paths
+- **Automated API URL configuration**: Templates now automatically convert hardcoded `localhost` URLs to relative paths
+- **Production-tested deployment**: Full-stack deployment verified with real-world monorepo (mapa-kms project)
+- **Template consistency**: All Dockerfile templates (Nix, npm, monorepo) include automatic API configuration fixes
+
+**Beta Status Verification:**
+- ✅ Backend APIs responding correctly through nginx proxy
+- ✅ Frontend successfully communicating with backend via `/api/*` routes
+- ✅ Zero-downtime incremental deployment working
+- ✅ Container networking and SSL termination operational
+- ✅ Multi-framework support tested (Rust + React frontend)
 
 For detailed implementation status, see the [Implementation Status](../IMPLEMENTATION_STATUS.md) document.

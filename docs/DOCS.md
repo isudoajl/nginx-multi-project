@@ -1,6 +1,16 @@
 # Microservices Nginx Architecture - Documentation
 
+**Status: PRODUCTION READY BETA** - Full-stack deployment with frontend-backend communication working as expected!
+
 This document provides a comprehensive overview of the documentation available for the Microservices Nginx Architecture project. The documentation is organized by user role and use case to help you find the information you need quickly.
+
+## 🎉 Latest Beta Release (2025-07-23)
+
+**Frontend-Backend Communication Now Working!**
+- ✅ **API Routing Fixed**: nginx proxy now correctly routes `/api/*` requests to backend services
+- ✅ **Automated Configuration**: Templates automatically fix hardcoded API URLs during build
+- ✅ **Production Tested**: Real-world deployment verified with Rust backend + React frontend
+- ✅ **Zero-Downtime Updates**: Incremental deployment working without service disruption
 
 ## Quick Start
 
@@ -131,16 +141,22 @@ The system uses container name-based communication without exposed ports:
 
 For more details, see the [Project Container Architecture](project-container-architecture.md) document.
 
-### Full-Stack Deployment Support
+### Full-Stack Deployment Support ✅ WORKING
 
 The system now supports comprehensive full-stack deployments with integrated frontend and backend services:
 
-- **Multi-Framework Backend Support**: Rust, Node.js, Go, Python
-- **Multi-Service Containers**: nginx + backend application server
-- **API Routing**: Automatic `/api/*` → backend proxy configuration
-- **Framework Detection**: Automatic build system detection and configuration
-- **Process Management**: Coordinated startup and health monitoring
-- **Monorepo Integration**: Support for existing Nix flake configurations
+- **✅ Multi-Framework Backend Support**: Rust, Node.js, Go, Python
+- **✅ Multi-Service Containers**: nginx + backend application server
+- **✅ API Routing**: Automatic `/api/*` → backend proxy configuration **[FIXED]**
+- **✅ Framework Detection**: Automatic build system detection and configuration
+- **✅ Process Management**: Coordinated startup and health monitoring
+- **✅ Monorepo Integration**: Support for existing Nix flake configurations
+- **✅ Frontend-Backend Communication**: Automatic API URL configuration **[NEW]**
+
+**Latest Fixes in Beta Release:**
+- **Fixed nginx proxy routing**: `/api/*` requests now correctly reach backend services
+- **Automated API configuration**: Templates automatically convert hardcoded URLs to relative paths
+- **Production verified**: Real-world testing with mapa-kms project (Rust + React)
 
 Example full-stack deployment:
 ```bash

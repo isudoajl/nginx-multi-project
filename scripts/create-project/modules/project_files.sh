@@ -185,8 +185,16 @@ RUN npm ci --only=production
 # Copy frontend source code
 COPY $FRONTEND_SUBDIR .
 
-# Build the frontend
-RUN ${FRONTEND_BUILD_CMD:-npm run build}
+# Fix common hardcoded API configurations for relative URLs (exclude node_modules)
+RUN find . -path "*/node_modules" -prune -o -name "*.ts" -print -o -name "*.js" -print -o -name "*.tsx" -print -o -name "*.jsx" -print | \
+    xargs grep -l "localhost:3000\|localhost:8000\|localhost:4000" 2>/dev/null | \
+    head -10 | \
+    while read file; do \
+        [ -f "\$file" ] && sed -i "s/'http:\/\/localhost:[0-9]*'/''/g; s/\"http:\/\/localhost:[0-9]*\"/''/g; s/const API_BASE_URL = 'http:\/\/localhost:[0-9]*'/const API_BASE_URL = ''/g" "\$file" || true; \
+    done || true
+
+# Build the frontend (with API config for relative URLs)
+RUN export REACT_APP_API_URL='' && export VITE_API_URL='' && ${FRONTEND_BUILD_CMD:-npm run build}
 
 # Stage 2: Nginx web server
 FROM nginx:alpine
@@ -234,8 +242,16 @@ WORKDIR /build
 # Copy entire monorepo (to access flake.nix and frontend directory)
 COPY . .
 
-# Build frontend using Nix dev environment + build command
-RUN nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $FRONTEND_SUBDIR && ${FRONTEND_BUILD_CMD:-npm run build}"
+# Fix common hardcoded API configurations for relative URLs (exclude node_modules)
+RUN find . -path "*/node_modules" -prune -o -name "*.ts" -print -o -name "*.js" -print -o -name "*.tsx" -print -o -name "*.jsx" -print | \
+    xargs grep -l "localhost:3000\|localhost:8000\|localhost:4000" 2>/dev/null | \
+    head -10 | \
+    while read file; do \
+        [ -f "\$file" ] && perl -i -pe "s/'http:\/\/localhost:\d+'/''/g; s/\"http:\/\/localhost:\d+\"/''/g; s/const API_BASE_URL = 'http:\/\/localhost:\d+'/const API_BASE_URL = ''/g" "\$file" || true; \
+    done || true
+
+# Build frontend using Nix dev environment + build command (with API config)
+RUN nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $FRONTEND_SUBDIR && export REACT_APP_API_URL='' && export VITE_API_URL='' && ${FRONTEND_BUILD_CMD:-npm run build}"
 
 # Stage 2: Build backend using Rust with musl for static linking
 FROM rust:alpine AS backend-builder
@@ -317,8 +333,16 @@ RUN npm ci --only=production
 # Copy frontend source code
 COPY $FRONTEND_SUBDIR .
 
-# Build the frontend
-RUN ${FRONTEND_BUILD_CMD:-npm run build}
+# Fix common hardcoded API configurations for relative URLs (exclude node_modules)
+RUN find . -path "*/node_modules" -prune -o -name "*.ts" -print -o -name "*.js" -print -o -name "*.tsx" -print -o -name "*.jsx" -print | \
+    xargs grep -l "localhost:3000\|localhost:8000\|localhost:4000" 2>/dev/null | \
+    head -10 | \
+    while read file; do \
+        [ -f "\$file" ] && sed -i "s/'http:\/\/localhost:[0-9]*'/''/g; s/\"http:\/\/localhost:[0-9]*\"/''/g; s/const API_BASE_URL = 'http:\/\/localhost:[0-9]*'/const API_BASE_URL = ''/g" "\$file" || true; \
+    done || true
+
+# Build the frontend (with API config for relative URLs)
+RUN export REACT_APP_API_URL='' && export VITE_API_URL='' && ${FRONTEND_BUILD_CMD:-npm run build}
 
 # Stage 2: Build backend
 $(generate_npm_backend_builder_stage)
@@ -925,7 +949,7 @@ http {
         
         # API routes - proxy to backend
         location /api/ {
-            proxy_pass http://backend/;
+            proxy_pass http://backend;
             proxy_http_version 1.1;
             proxy_set_header Upgrade \$http_upgrade;
             proxy_set_header Connection 'upgrade';
