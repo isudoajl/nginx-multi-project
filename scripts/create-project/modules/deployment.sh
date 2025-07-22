@@ -252,6 +252,12 @@ function deploy_monorepo_project() {
     # Clean up any existing container with the same name
     $CONTAINER_ENGINE rm -f "${PROJECT_NAME}" &>/dev/null || true
     
+    # Copy startup script to monorepo root for Docker build context
+    if [[ -f "${project_dir}/start.sh" ]]; then
+      log "Copying startup script to monorepo root..."
+      cp "${project_dir}/start.sh" "${MONOREPO_DIR}/start.sh" || handle_error "Failed to copy startup script"
+    fi
+    
     # Build from monorepo context with dockerfile in project directory
     log "Building monorepo project image..."
     $CONTAINER_ENGINE build \

@@ -92,9 +92,9 @@ function detect_nix_configuration() {
     elif [[ -d "$MONOREPO_DIR/build" ]]; then
       BUILD_OUTPUT_DIR="build"
     elif [[ -d "$MONOREPO_DIR/$FRONTEND_SUBDIR/dist" ]]; then
-      BUILD_OUTPUT_DIR="$FRONTEND_SUBDIR/dist"
+      BUILD_OUTPUT_DIR="dist"  # Relative to FRONTEND_SUBDIR
     elif [[ -d "$MONOREPO_DIR/$FRONTEND_SUBDIR/build" ]]; then
-      BUILD_OUTPUT_DIR="$FRONTEND_SUBDIR/build"
+      BUILD_OUTPUT_DIR="build"  # Relative to FRONTEND_SUBDIR
     else
       BUILD_OUTPUT_DIR="dist"  # Default fallback
     fi
