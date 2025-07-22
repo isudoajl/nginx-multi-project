@@ -4,12 +4,13 @@
 
 #### create-project-modular.sh
 
-The original monolithic script for creating new project containers with all necessary configurations.
+The main script for creating project containers with support for both frontend-only and full-stack deployments.
 
 ```
 Usage: ./scripts/create-project-modular.sh [OPTIONS]
 
 Create a new project container with all necessary configuration files.
+Supports both frontend-only and full-stack deployments with backend services.
 
 Options:
   --name, -n NAME          Project name (required, alphanumeric with hyphens)
@@ -19,57 +20,77 @@ Options:
   --cert, -c FILE          Path to SSL certificate (optional)
   --key, -k FILE           Path to SSL private key (optional)
   --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
+  
+  Full-Stack/Monorepo Options:
+  --monorepo DIR           Path to monorepo root (enables full-stack deployment)
+  --frontend-dir DIR       Subdirectory containing frontend code (default: frontend)
+  --backend-dir DIR        Subdirectory containing backend code (enables backend services)
+  --backend-port PORT      Backend service port (default: 3000)
+  --backend-build CMD      Custom backend build command (optional)
+  
   --help, -h               Display this help message
 
 Examples:
+  # Frontend-only deployment
   ./scripts/create-project-modular.sh --name my-project --domain example.com
+  
+  # Development environment
   ./scripts/create-project-modular.sh -n my-project -d example.com -e DEV
+  
+  # Production environment
   ./scripts/create-project-modular.sh -n my-project -d example.com -e PRO
+  
+  # Full-stack monorepo deployment
+  ./scripts/create-project-modular.sh \
+    --name my-app \
+    --domain my-app.com \
+    --monorepo /path/to/monorepo \
+    --frontend-dir frontend \
+    --backend-dir backend \
+    --backend-port 3000 \
+    --env PRO
+    
+  # Custom backend build command
+  ./scripts/create-project-modular.sh \
+    --name rust-app \
+    --domain rust-app.com \
+    --monorepo /opt/rust-project \
+    --backend-dir server \
+    --backend-build "cargo build --release" \
+    --env PRO
 ```
 
-#### create-project-modular.sh
+## Full-Stack Deployment Features
 
-The refactored modular version of the project creation script. This script provides the same functionality as `create-project-modular.sh` but with a modular architecture for better maintainability.
+The script now supports comprehensive full-stack deployment capabilities including:
 
-> **Note:** The current implementation has module path discrepancy. The script looks for modules in `scripts/modules/` but they are actually located in `scripts/create-project/modules/`. Additionally, some referenced modules (`deployment.sh` and `verification.sh`) are missing from the implementation.
+### Backend Framework Support
+- **Rust**: Cargo-based build with `cargo build --release`
+- **Node.js**: npm/yarn builds with `npm run build` or custom commands
+- **Go**: Go module builds with `go build`
+- **Python**: Python package builds and runtime setup
 
-```
-Usage: ./scripts/create-project-modular.sh [OPTIONS]
-
-Create a new project container with all necessary configuration files.
-
-Options:
-  --name, -n NAME          Project name (required, alphanumeric with hyphens)
-  --domain, -d DOMAIN      Domain name (required, valid FQDN format)
-  --frontend, -f DIR       Path to static files (optional, default: ./projects/{project_name}/html)
-  --frontend-mount, -m DIR Path to mount as frontend in container (optional, default: ./html)
-  --cert, -c FILE          Path to SSL certificate (optional)
-  --key, -k FILE           Path to SSL private key (optional)
-  --env, -e ENV            Environment type: DEV or PRO (optional, default: DEV)
-  --help, -h               Display this help message
-
-Examples:
-  ./scripts/create-project-modular.sh --name my-project --domain example.com
-  ./scripts/create-project-modular.sh -n my-project -d example.com -e DEV
-  ./scripts/create-project-modular.sh -n my-project -d example.com -e PRO
-```
+### Multi-Service Container Architecture
+- **Frontend**: Static files served by nginx
+- **Backend**: Application server running on configurable port
+- **API Routing**: nginx proxy configuration for `/api/*` → backend
+- **Health Checks**: Both frontend and backend health monitoring
+- **Process Management**: Startup script coordinating both services
 
 ### Modular Script Architecture
 
-The modular script is organized into separate components:
+The script is organized into separate modules for maintainability:
 
 - **create-project-modular.sh**: Main script that coordinates all modules
 - **modules/common.sh**: Common functions and variables shared across modules
-- **modules/args.sh**: Command-line argument parsing and validation
+- **modules/args.sh**: Command-line argument parsing and backend framework detection
 - **modules/environment.sh**: Environment validation and configuration
 - **modules/proxy.sh**: Proxy management and configuration
 - **modules/proxy_utils.sh**: Utility functions for proxy-related operations
 - **modules/project_structure.sh**: Project directory structure setup
-- **modules/project_files.sh**: Project file generation
-
-**Missing Modules (Referenced but not implemented):**
-- **modules/deployment.sh**: Project deployment functionality
-- **modules/verification.sh**: Deployment verification functionality
+- **modules/project_files.sh**: Multi-stage Dockerfile and configuration generation
+- **modules/deployment.sh**: Full-stack project deployment and container management
+- **modules/verification.sh**: Network connectivity and health check verification
 
 ### Other Scripts
 

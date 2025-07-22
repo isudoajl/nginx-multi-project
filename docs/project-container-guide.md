@@ -42,13 +42,20 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 
 ## Project Container Architecture
 
-Each project container consists of:
+Each project container supports both frontend-only and full-stack architectures:
 
+### Frontend-Only Containers
 1. **Nginx Configuration**: Custom settings for the specific project
 2. **Container Setup**: Container definition and networking
 3. **Static Content**: Website files and assets
 4. **Health Checks**: Monitoring endpoints
-5. **Internal Networking**: Container-to-container communication without exposed ports
+
+### Full-Stack Containers
+1. **Multi-Service Architecture**: nginx + backend application server
+2. **API Routing**: nginx proxy configuration for backend services
+3. **Framework Support**: Rust, Node.js, Go, Python backend services
+4. **Process Management**: Coordinated startup and health monitoring
+5. **Internal Networking**: Container-internal communication between services
 
 ## Creating a New Project
 
@@ -76,7 +83,19 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 | `--cert`, `-c` | SSL certificate path | `/etc/ssl/certs/cert.pem` | `--cert /path/to/cert.pem` |
 | `--key`, `-k` | SSL private key path | `/etc/ssl/certs/private/cert-key.pem` | `--key /path/to/key.pem` |
 
+### Full-Stack Parameters
+
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|---------|
+| `--monorepo` | Path to monorepo root (enables full-stack) | N/A | `--monorepo /opt/my-app` |
+| `--frontend-dir` | Frontend subdirectory in monorepo | `frontend` | `--frontend-dir client` |
+| `--backend-dir` | Backend subdirectory in monorepo | N/A | `--backend-dir server` |
+| `--backend-port` | Backend service port | `3000` | `--backend-port 8080` |
+| `--backend-build` | Custom backend build command | Auto-detected | `--backend-build "cargo build --release"` |
+
 ### Examples
+
+#### Frontend-Only Projects
 
 ```bash
 # Create a basic production project
@@ -86,6 +105,44 @@ nix --extra-experimental-features "nix-command flakes" develop --command \
 # Create a production project with custom frontend
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh --name shop --domain shop.example.com --env PRO --frontend /path/to/shop/dist
+```
+
+#### Full-Stack Projects
+
+```bash
+# Rust + React full-stack deployment
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name my-rust-app \
+  --domain my-rust-app.com \
+  --monorepo /opt/my-rust-app \
+  --frontend-dir frontend \
+  --backend-dir backend \
+  --backend-port 3000 \
+  --env PRO
+
+# Node.js + Vue full-stack deployment
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name my-node-app \
+  --domain my-node-app.com \
+  --monorepo /home/user/my-node-app \
+  --frontend-dir client \
+  --backend-dir server \
+  --backend-port 8080 \
+  --backend-build "npm run build:server" \
+  --env PRO
+
+# Go + React with custom build
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name my-go-app \
+  --domain my-go-app.com \
+  --monorepo /opt/go-project \
+  --frontend-dir web \
+  --backend-dir api \
+  --backend-build "go build -o ./bin/server ./cmd/server" \
+  --env PRO
 ```
 
 ## 🧹 Fresh Environment Reset

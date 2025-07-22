@@ -67,6 +67,67 @@ RUN # Smart detection logic automatically selects correct pattern
 
 This approach ensures compatibility with different flake.nix configurations without requiring manual path specification.
 
+## Multi-Service Architecture (Full-Stack)
+
+### Overview
+
+Project containers can host both frontend and backend services in a single container using a coordinated startup approach with nginx as the frontend proxy and a backend application server.
+
+### Supported Backend Frameworks
+
+| Framework | Detection File | Build Command | Runtime Requirements |
+|-----------|---------------|---------------|---------------------|
+| Rust | `Cargo.toml` | `cargo build --release` | `bash curl ca-certificates` |
+| Node.js | `package.json` | `npm run build` | `bash curl nodejs npm` |
+| Go | `go.mod` | `go build` | `bash curl ca-certificates` |
+| Python | `requirements.txt` | Custom setup | `bash curl python3 py3-pip` |
+
+### Multi-Stage Build Process
+
+```dockerfile
+# Stage 1: Frontend Builder
+FROM nixos/nix:latest AS frontend-builder
+COPY . .
+RUN nix develop --command bash -c "cd frontend && npm run build"
+
+# Stage 2: Backend Builder  
+FROM nixos/nix:latest AS backend-builder
+COPY . .
+RUN nix develop --command bash -c "cd backend && cargo build --release"
+
+# Stage 3: Multi-Service Runtime
+FROM nginx:alpine
+RUN apk add --no-cache bash curl ca-certificates
+
+# Copy frontend build output
+COPY --from=frontend-builder /build/frontend/dist /usr/share/nginx/html
+
+# Copy backend binary
+COPY --from=backend-builder /build/backend/target/release/app /opt/backend/app
+
+# Setup multi-service startup
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+CMD ["/start.sh"]
+```
+
+### Service Orchestration
+
+The startup script coordinates both services:
+
+1. **Backend Startup**: Launches backend application on configured port
+2. **Health Check Wait**: Waits for backend `/health` endpoint (up to 30s)
+3. **Frontend Startup**: Starts nginx with proxy configuration
+4. **Signal Handling**: Graceful shutdown of both services
+
+### Internal Service Communication
+
+- **Frontend-to-Backend**: nginx proxy routes `/api/*` to `localhost:${BACKEND_PORT}`
+- **Health Monitoring**: Both services provide health check endpoints
+- **Process Management**: Coordinated startup/shutdown with proper signal handling
+- **Network Isolation**: No exposed backend ports, all traffic through nginx
+
 ## Docker Compose Configuration
 
 ```yaml
@@ -316,8 +377,10 @@ Each project container can be customized with:
    - Buffer sizes
 
 4. **Backend service integration**
-   - Proxy configurations for APIs
-   - Authentication service connections
+   - Proxy configurations for APIs (`/api/*` → backend service)
+   - Multi-framework support (Rust, Node.js, Go, Python)
+   - Process management and health monitoring
+   - Internal service communication on configurable ports
 
 ## Integration with Proxy
 

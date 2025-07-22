@@ -69,13 +69,26 @@ certs/cert-key.pem    # SSL private key
 > sudo apt install iptables-persistent && sudo netfilter-persistent save
 > ```
 
-**Production Environment**
+**Production Environment (Frontend-Only)**
 ```bash
 nix --extra-experimental-features "nix-command flakes" develop --command \
 ./scripts/create-project-modular.sh \
   --name my-first-app \
   --port 8090 \
   --domain my-first-app.com \
+  --env PRO
+```
+
+**Production Environment (Full-Stack Monorepo)**
+```bash
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name my-fullstack-app \
+  --domain my-fullstack-app.com \
+  --monorepo /path/to/monorepo \
+  --frontend-dir frontend \
+  --backend-dir backend \
+  --backend-port 3000 \
   --env PRO
 ```
 
@@ -181,6 +194,89 @@ net1234567    nginx-proxy-network bridge
 net2345678    my-first-app-net    bridge
 net3456789    second-app-net      bridge
 ```
+
+## 🚀 Full-Stack Deployment
+
+### Overview
+
+The system supports full-stack deployments with integrated frontend and backend services in a single container. This includes automatic framework detection, multi-stage builds, and API routing configuration.
+
+### Supported Backend Frameworks
+
+- **Rust**: Cargo-based builds with automatic binary detection
+- **Node.js**: npm/yarn builds with configurable commands
+- **Go**: Go module builds with binary compilation  
+- **Python**: Python package builds with runtime setup
+
+### Full-Stack Deployment Example
+
+**Real-World Production Example (Rust + React)**
+```bash
+nix --extra-experimental-features "nix-command flakes" develop --command \
+./scripts/create-project-modular.sh \
+  --name mapa-kms \
+  --domain mapakms.com \
+  --monorepo /opt/mapa-kms \
+  --frontend-dir frontend \
+  --backend-dir backend \
+  --backend-port 3000 \
+  --env PRO
+```
+
+### What Happens During Full-Stack Deployment
+
+1. **Framework Detection**
+   - Automatically detects backend framework (Cargo.toml, package.json, go.mod, requirements.txt)
+   - Configures framework-specific build commands
+   - Sets up runtime dependencies
+
+2. **Multi-Stage Container Build**
+   - **Stage 1**: Frontend build using existing Nix flake or npm
+   - **Stage 2**: Backend compilation with framework-specific tools
+   - **Stage 3**: Final image with nginx + backend service
+
+3. **Service Configuration**
+   - nginx configuration with `/api/*` → backend routing
+   - Backend service startup and health checks
+   - Process management with graceful shutdown
+
+4. **API Integration**
+   - Automatic proxy configuration for API endpoints
+   - CORS and security header setup
+   - Health check endpoints for both services
+
+### Full-Stack Container Architecture
+
+```
+┌─────────────────────────────────────┐
+│           Container                 │
+│  ┌─────────────┐  ┌───────────────┐ │
+│  │    nginx    │  │ Backend App   │ │
+│  │   :80       │  │   :3000       │ │
+│  └─────────────┘  └───────────────┘ │
+│         │                 │         │
+│  ┌─────────────┐  ┌───────────────┐ │
+│  │Frontend     │  │ /api/* proxy  │ │
+│  │Static Files │  │ to backend    │ │
+│  └─────────────┘  └───────────────┘ │
+└─────────────────────────────────────┘
+```
+
+### Troubleshooting Full-Stack Deployments
+
+**Common Issues:**
+
+1. **API Connection Problems**
+   - Frontend configured for direct backend access (`localhost:3000`) instead of proxy routing
+   - Solution: Configure frontend to use relative paths (`/api/v1/*`)
+
+2. **Backend Health Check Failures**
+   - Backend not implementing `/health` endpoint
+   - Solution: Add health endpoint or disable health checks
+
+3. **Container Startup Issues**
+   - Missing runtime dependencies (bash, curl)
+   - Solution: Dependencies are auto-installed based on framework
 
 ## 🧹 Fresh Environment Reset
 
