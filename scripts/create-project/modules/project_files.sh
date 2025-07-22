@@ -474,19 +474,19 @@ EOF
 function generate_backend_runtime_packages() {
   case "${BACKEND_FRAMEWORK:-unknown}" in
     "rust")
-      echo "RUN apk add --no-cache curl ca-certificates"
+      echo "RUN apk add --no-cache bash curl ca-certificates"
       ;;
     "nodejs")
-      echo "RUN apk add --no-cache curl nodejs npm"
+      echo "RUN apk add --no-cache bash curl nodejs npm"
       ;;
     "go")
-      echo "RUN apk add --no-cache curl ca-certificates"
+      echo "RUN apk add --no-cache bash curl ca-certificates"
       ;;
     "python")
-      echo "RUN apk add --no-cache curl python3 py3-pip"
+      echo "RUN apk add --no-cache bash curl python3 py3-pip"
       ;;
     *)
-      echo "RUN apk add --no-cache curl"
+      echo "RUN apk add --no-cache bash curl"
       ;;
   esac
 }
@@ -555,7 +555,8 @@ start_backend() {
             backend_binary=\$(find /opt/backend -type f -executable | head -n 1)
             if [[ -n "\$backend_binary" ]]; then
                 log "Starting Rust backend: \$backend_binary"
-                PORT=$BACKEND_PORT "\$backend_binary" &
+                # Rust backend typically manages its own port configuration
+                "\$backend_binary" &
             else
                 log "ERROR: No Rust backend binary found in /opt/backend"
                 exit 1
@@ -589,6 +590,19 @@ start_backend() {
     
     BACKEND_PID=\$!
     log "Backend service started with PID: \$BACKEND_PID"
+    
+    # Wait for backend to be ready before starting nginx
+    log "Waiting for backend to be ready..."
+    for i in {1..30}; do
+        if curl -f http://localhost:$BACKEND_PORT/health >/dev/null 2>&1; then
+            log "Backend is ready!"
+            break
+        fi
+        if [[ \$i -eq 30 ]]; then
+            log "WARNING: Backend health check timeout after 30 seconds"
+        fi
+        sleep 1
+    done
 }
 
 # Function to start nginx
