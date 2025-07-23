@@ -237,21 +237,10 @@ FROM nixos/nix:latest AS frontend-builder
 # Enable flakes support
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
-# Install sed for text processing
-RUN nix-env -i gnused
-
 WORKDIR /build
 
 # Copy entire monorepo (to access flake.nix and frontend directory)
 COPY . .
-
-# Fix common hardcoded API configurations for relative URLs (exclude node_modules)
-RUN find . -path "*/node_modules" -prune -o -name "*.ts" -print -o -name "*.js" -print -o -name "*.tsx" -print -o -name "*.jsx" -print | \
-    xargs grep -l "localhost:3000\|localhost:8000\|localhost:4000" 2>/dev/null | \
-    head -10 | \
-    while read file; do \
-        [ -f "\$file" ] && sed -i -E "s/'http:\/\/localhost:[0-9]+'/''/g; s/\"http:\/\/localhost:[0-9]+\"/''/g; s/const API_BASE_URL = 'http:\/\/localhost:[0-9]+'/const API_BASE_URL = ''/g" "\$file" || true; \
-    done || true
 
 # Build frontend using Nix dev environment + build command (with API config)
 RUN nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $FRONTEND_SUBDIR && export REACT_APP_API_URL='' && export VITE_API_URL='' && ${FRONTEND_BUILD_CMD:-npm run build}"
