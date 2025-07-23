@@ -237,8 +237,8 @@ FROM nixos/nix:latest AS frontend-builder
 # Enable flakes support
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
-# Install perl for text processing
-RUN nix-env -i perl
+# Install sed for text processing
+RUN nix-env -i gnused
 
 WORKDIR /build
 
@@ -250,7 +250,7 @@ RUN find . -path "*/node_modules" -prune -o -name "*.ts" -print -o -name "*.js" 
     xargs grep -l "localhost:3000\|localhost:8000\|localhost:4000" 2>/dev/null | \
     head -10 | \
     while read file; do \
-        [ -f "\$file" ] && perl -i -pe "s/'http:\/\/localhost:\d+'/''/g; s/\"http:\/\/localhost:\d+\"/''/g; s/const API_BASE_URL = 'http:\/\/localhost:\d+'/const API_BASE_URL = ''/g" "\$file" || true; \
+        [ -f "\$file" ] && sed -i -E "s/'http:\/\/localhost:[0-9]+'/''/g; s/\"http:\/\/localhost:[0-9]+\"/''/g; s/const API_BASE_URL = 'http:\/\/localhost:[0-9]+'/const API_BASE_URL = ''/g" "\$file" || true; \
     done || true
 
 # Build frontend using Nix dev environment + build command (with API config)
