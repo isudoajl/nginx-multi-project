@@ -237,6 +237,9 @@ FROM nixos/nix:latest AS frontend-builder
 # Enable flakes support
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
+# Install perl for text processing
+RUN nix-env -i perl
+
 WORKDIR /build
 
 # Copy entire monorepo (to access flake.nix and frontend directory)
