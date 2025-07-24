@@ -1,0 +1,1 @@
+First check the files specs/SPECS.md docs/DOCS.md to gain understanding about this tool. This tool its about incrementally deploying webaps (projects) using podman as a container technology and without affecting the other deployed projects.

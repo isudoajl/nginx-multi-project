@@ -179,8 +179,12 @@ WORKDIR /build
 # Copy package files for dependency installation
 COPY $FRONTEND_SUBDIR/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies needed for build)
+RUN if [ -f package-lock.json ]; then \
+        npm ci; \
+    else \
+        npm install; \
+    fi
 
 # Copy frontend source code
 COPY $FRONTEND_SUBDIR .
@@ -243,7 +247,7 @@ WORKDIR /build
 COPY . .
 
 # Build frontend using Nix dev environment + build command (with API config)
-RUN nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $FRONTEND_SUBDIR && export REACT_APP_API_URL='' && export VITE_API_URL='' && ${FRONTEND_BUILD_CMD:-npm run build}"
+RUN nix --extra-experimental-features "nix-command flakes" develop --command bash -c "cd $FRONTEND_SUBDIR && npm install && export REACT_APP_API_URL='' && export VITE_API_URL='' && ${FRONTEND_BUILD_CMD:-npm run build}"
 
 # Stage 2: Build backend using Rust with musl for static linking
 FROM rust:alpine AS backend-builder
@@ -319,8 +323,12 @@ WORKDIR /build
 # Copy package files for dependency installation
 COPY $FRONTEND_SUBDIR/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies needed for build)
+RUN if [ -f package-lock.json ]; then \
+        npm ci; \
+    else \
+        npm install; \
+    fi
 
 # Copy frontend source code
 COPY $FRONTEND_SUBDIR .
@@ -390,7 +398,7 @@ function generate_backend_build_commands() {
       ;;
     "nodejs")
       echo "# Build backend using Nix dev environment + npm"
-      echo "RUN nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"cd $BACKEND_SUBDIR && ${BACKEND_BUILD_CMD:-npm run build}\""
+      echo "RUN nix --extra-experimental-features \"nix-command flakes\" develop --command bash -c \"cd $BACKEND_SUBDIR && npm install && ${BACKEND_BUILD_CMD:-npm run build}\""
       ;;
     "go")
       echo "# Build backend using Nix dev environment + go"
@@ -420,8 +428,12 @@ WORKDIR /build
 # Copy backend package files
 COPY $BACKEND_SUBDIR/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies needed for build)
+RUN if [ -f package-lock.json ]; then \
+        npm ci; \
+    else \
+        npm install; \
+    fi
 
 # Copy backend source code
 COPY $BACKEND_SUBDIR .
